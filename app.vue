@@ -23,6 +23,16 @@
         <div class="max-w-[550px] text-center sm:text-lg text-muted-foreground">
           Liberate your bookmarks! Rediscover the buried treasures in your
           archive. All data stays private and local to your computer.
+          <span class="ml-1">
+            Everything open sourced
+            <a
+              href="https://github.com/chrislee973/twitter-bookmark-search"
+              target="_blank"
+              class="inline-flex items-center underline hover:text-gray-900 transition-colors"
+            >
+              here <Icon name="mdi:github" class="w-4 h-4 ml-0.5" />
+            </a>
+          </span>
         </div>
         <div class="sm:hidden italic text-sm mb-2 text-center">
           This is primarily meant to be used on desktop, so it currently isn't
