@@ -1,7 +1,5 @@
 # Twitter Bookmark Search
 
-**Disclaimer: I'm not a software engineer, so I make no claims as to the quality of this code ;)**
-
 Liberate your bookmarks! This repo is the code behind https://twitter-bookmark-search.vercel.app/
 
 ### Key Features
@@ -27,10 +25,11 @@ yarn install
 pnpm install
 ```
 
-3. (Optional) If you'd like to take advantage of the chat-with-your-bookmarks feature, create a `.env` file in the root directory and add your OpenAI API key:
+3. (Optional) If you'd like to take advantage of the chat-with-your-bookmarks feature, create a `.env` file in the root directory and add your OpenAI or Google Gemini API key:
 
 ```
 OPENAI_API_KEY=your_api_key_here
+GEMINI_API_KEY=your_api_key_here
 ```
 
 ## Development
