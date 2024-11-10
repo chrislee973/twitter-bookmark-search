@@ -1,13 +1,15 @@
 # Twitter Bookmark Search
 
-Liberate your bookmarks! This repo is the code behind https://twitter-bookmark-search.vercel.app/
+This repo is the code behind https://twitter-bookmark-search.vercel.app/.
+
+Liberate your bookmarks! This project provides methods for exporting your bookmarks from Twitter and a simple interface for searching and chatting with them.
 
 ### Key Features
 
 - a script to scrape your Twitter bookmarks as a json file
 - a simple web UI to search your exported bookmarks
-- a chat-with-your-bookmarks feature (bring your own OpenAI key)
-  - Note: I'm currently just naively shoving the entire bookmarks json into the prompt (see `composables/useBookmarkChat.js`). Depending on how many bookmarks you have, this may exceed the context window length. Consider feeding a filtered slice of your bookmarks into the prompt.
+- a chat-with-your-bookmarks feature (bring your own OpenAI or Google Gemini key)
+  - Note: Right now I'm just stuffing the entire bookmarks json into the prompt (see `composables/useBookmarkChat.js`). Depending on how many bookmarks you have, this may exceed the context window length. Consider feeding a filtered slice of your bookmarks into the prompt or use Gemini Pro, which has a 2M token context window.
 
 ## Setup
 
