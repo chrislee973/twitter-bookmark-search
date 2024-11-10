@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-8">
+  <div v-if="bookmarks" class="mt-8">
     <h1 class="text-2xl font-bold mb-4 text-center">AI Chat</h1>
     <div class="max-w-2xl mx-auto text-center mb-4">
       Currently supported models are GPT-4o-mini and Gemini 1.5 Pro + Flash. You
@@ -82,6 +82,16 @@
       </div>
     </div>
   </div>
+  <div v-else class="mt-12 relative border-dashed border rounded-md h-[450px]">
+    <div class="absolute inset-0 m-auto h-fit w-fit text-center">
+      <div class="font-semibolt text-lg">No bookmarks file detected</div>
+      <div class="text-sm text-muted-foreground mt-2">
+        Follow the steps in
+        <NuxtLink to="/" class="underline">the instructions</NuxtLink>
+        and upload your bookmarks file.
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -93,6 +103,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { bookmarks } from "~/composables/state";
 
 const openaiApiKey = useOpenAIKey();
 const geminiApiKey = useGeminiKey();

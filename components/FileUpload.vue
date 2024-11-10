@@ -62,21 +62,6 @@ const dropzoneEl = ref();
 const isOverDropZone = ref(false);
 
 const isValidJsonSchema = ref<Boolean | null>(null);
-// function validateJsonSchema() {
-//   if (bookmarks.value) {
-//     // validate it against Tweet type
-//     isValidJsonSchema.value = bookmarks.value.every((bookmark: Tweet) => {
-//       return (
-//         bookmark.id &&
-//         bookmark.date &&
-//         bookmark.text &&
-//         bookmark.url &&
-//         bookmark.user &&
-//         bookmark.media
-//       );
-//     });
-//   }
-// }
 
 const uploadFileName = ref<string | null>(null);
 async function onFileChange(e: Event) {

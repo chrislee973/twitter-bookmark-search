@@ -1,5 +1,6 @@
 import { ref, watch } from "vue";
-import bookmarksData from "~/bookmarks.json";
+// import bookmarksData from "~/bookmarks.json";
+import { bookmarks as bookmarksData } from "~/composables/state";
 
 export function useBookmarkChat(modelProvider) {
   const { streamCompletion, isStreaming } = useLLM(modelProvider);
@@ -11,7 +12,7 @@ export function useBookmarkChat(modelProvider) {
 
   // // For development purposes, we limit the number of bookmarks to 100
   if (process.env.NODE_ENV === "development") {
-    bookmarksData.data = bookmarksData.data.slice(0, 100);
+    bookmarksData.value = bookmarksData.value.slice(0, 100);
   }
   const systemMessage = {
     role: "system",
@@ -19,7 +20,7 @@ export function useBookmarkChat(modelProvider) {
   
   Here are the bookmarks:
   
-  ${JSON.stringify(bookmarksData.data, null, 2)}
+  ${JSON.stringify(bookmarksData.value, null, 2)}
   
   Provide relevant responses based on these bookmarks and the user's queries.`,
   };

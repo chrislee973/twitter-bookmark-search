@@ -53,7 +53,7 @@ import Fuse from "fuse.js";
 import { type FuseResult } from "fuse.js";
 import { bookmarks } from "~/composables/state";
 import { useLocalStorage } from "@vueuse/core";
-import { StorageSerializers, useStorage } from "@vueuse/core";
+import { StorageSerializers } from "@vueuse/core";
 import { Button } from "@/components/ui/button";
 import type { Tweet } from "~/types";
 
@@ -68,7 +68,7 @@ const searchResultsToDisplay = ref<FuseResult<Tweet>[] | null>(null);
 
 const localBookmarks = useLocalStorage<Tweet[]>("twitter-bookmarks", null, {
   serializer: StorageSerializers.object,
-}); // By default, useStorage will use the value from storage if it is present and ignores the default value.
+}); // By default, useLocalStorage will use the value from storage if it is present and ignores the default value.
 if (localBookmarks.value) {
   bookmarks.value = localBookmarks.value;
 }
