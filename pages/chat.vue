@@ -94,7 +94,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue";
 import {
   Select,
@@ -104,8 +104,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { bookmarks } from "~/composables/state";
+import { useLLMKeys } from "@/composables/useLLMKeys";
 
-const openaiApiKey = useOpenAIKey();
-const geminiApiKey = useGeminiKey();
+const { openai: openaiApiKey, gemini: geminiApiKey } = useLLMKeys();
+
 const selectedLLMProvider = ref("openai");
 </script>

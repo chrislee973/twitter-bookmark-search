@@ -26,6 +26,11 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  useOpenAIKey,
+  useGeminiKey,
+  useLLMKeys,
+} from "@/composables/useLLMKeys";
 
 const props = defineProps({
   provider: {
@@ -34,8 +39,8 @@ const props = defineProps({
   },
 });
 
-const openaiApiKey = useOpenAIKey();
-const geminiApiKey = useGeminiKey();
+const { openai: openaiApiKey, gemini: geminiApiKey } = useLLMKeys();
+
 const apiKeyUserInput = ref("");
 const isOpen = ref(false);
 

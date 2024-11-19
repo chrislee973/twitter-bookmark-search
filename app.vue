@@ -23,7 +23,7 @@
         <div class="max-w-[550px] text-center sm:text-lg text-muted-foreground">
           Liberate your bookmarks! Rediscover the buried treasures in your
           archive. All data stays private and local to your computer.
-          <span class="ml-1">
+          <span>
             Everything open sourced
             <a
               href="https://github.com/chrislee973/twitter-bookmark-search"

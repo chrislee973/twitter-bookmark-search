@@ -109,8 +109,6 @@ const {
   tokenUsage,
   errorMessage,
 } = useBookmarkChat(toRef(() => props.selectedLLMProvider));
-const openaiApiKey = useOpenAIKey();
-const geminiApiKey = useGeminiKey();
 const userInput = ref("");
 
 const handleSubmit = () => {

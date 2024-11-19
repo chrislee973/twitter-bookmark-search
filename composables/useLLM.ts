@@ -47,7 +47,6 @@ export function useLLM(
   initializeAI();
 
   watch([openaiApiKey, geminiApiKey, modelProvider], () => {
-    console.log("API keys or model provider changed", modelProvider.value);
     initializeAI();
   });
 

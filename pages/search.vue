@@ -66,13 +66,6 @@ const searchQuery = ref("");
 const searchResults = ref<FuseResult<Tweet>[] | null>(null);
 const searchResultsToDisplay = ref<FuseResult<Tweet>[] | null>(null);
 
-const localBookmarks = useLocalStorage<Tweet[]>("twitter-bookmarks", null, {
-  serializer: StorageSerializers.object,
-}); // By default, useLocalStorage will use the value from storage if it is present and ignores the default value.
-if (localBookmarks.value) {
-  bookmarks.value = localBookmarks.value;
-}
-
 let fuse: Fuse<Tweet> | null = null;
 watchEffect(() => {
   if (bookmarks.value) {
