@@ -26,11 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  useOpenAIKey,
-  useGeminiKey,
-  useLLMKeys,
-} from "@/composables/useLLMKeys";
+import { useLLMKeys } from "@/composables/useLLMKeys";
 
 const props = defineProps({
   provider: {
