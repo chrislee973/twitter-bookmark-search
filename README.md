@@ -1,6 +1,6 @@
 # Twitter Bookmark Search
 
-This repo is the code behind https://twitter-bookmark-search.vercel.app/.
+This repo is the code behind https://twitter-bookmarks-search.vercel.app/.
 
 Liberate your bookmarks! This project provides methods for exporting your bookmarks from Twitter and a simple interface for searching and chatting with them.
 
