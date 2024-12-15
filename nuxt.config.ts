@@ -29,11 +29,11 @@ export default defineNuxtConfig({
         { property: "og:title", content: "Twitter Bookmark Search" },
         {
           property: "og:image",
-          content: "https://twitter-bookmarks-search.vercel.app/ogimage.png",
+          content: "https://www.twitter-bookmark-search.com/ogimage.png",
         },
         {
           name: "twitter:image",
-          content: "https://twitter-bookmarks-search.vercel.app/ogimage.png",
+          content: "https://www.twitter-bookmark-search.com/ogimage.png",
         },
         {
           property: "og:description",
