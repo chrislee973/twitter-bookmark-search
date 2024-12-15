@@ -1,16 +1,4 @@
 <template>
-  <a href="https://x.com/626ripes/status/1810770370087244238" target="_blank">
-    <div class="md:p-2 p-4 bg-[#1b9bee] text-white">
-      <div class="flex items-center justify-center md:text-base text-sm">
-        <Icon name="fluent-emoji-flat:megaphone" class="w-5 h-5 mr-2" />
-        Bookmark search is now a native feature on Twitter/X!
-      </div>
-      <div class="flex items-center justify-center mt-2 md:text-sm text-xs">
-        Out of pride, I will still be using and maintaining this app, so feel
-        free to stick around and continue using this :)
-      </div>
-    </div>
-  </a>
   <div class="max-w-3xl mx-auto min-h-screen flex flex-col">
     <main class="px-5 grow">
       <div class="flex flex-col items-center gap-2 pt-14 sm:pt-32">
@@ -21,8 +9,9 @@
           <Icon name="radix-icons:bookmark-filled" color="#1d9bf0" />
         </div>
         <div class="max-w-[550px] text-center sm:text-lg text-muted-foreground">
-          Liberate your bookmarks! Rediscover the buried treasures in your
-          archive. All data stays private and local to your computer.
+          Liberate your bookmarks! Export, search, and chat with your Twitter
+          bookmarks.
+
           <span>
             Everything open sourced
             <a
