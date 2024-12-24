@@ -13,14 +13,14 @@
           bookmarks.
 
           <span>
-            Everything open sourced
+            Source code is available on
             <a
               href="https://github.com/chrislee973/twitter-bookmark-search"
               target="_blank"
               class="inline-flex items-center underline hover:text-gray-900 transition-colors"
             >
-              here <Icon name="mdi:github" class="w-4 h-4 ml-0.5" />
-            </a>
+              Github </a
+            >.
           </span>
         </div>
         <div class="sm:hidden italic text-sm mb-2 text-center">
