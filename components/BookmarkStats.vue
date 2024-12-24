@@ -18,7 +18,7 @@
 
     <!-- <BookmarkedUserStats /> -->
     <div class="text-lg font-semibold text-center">
-      Your 10 most bookmarked users
+      My 10 most bookmarked users
     </div>
     <div>
       <div

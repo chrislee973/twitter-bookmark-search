@@ -1,9 +1,6 @@
 <template>
-  <!-- mb-5 rounded-xl -->
-  <div
-    class="p-4 flex hover:bg-[rgba(0,0,0,0.03)] transition-colors"
-    :class="{ 'border border-gray-200 rounded-xl': isQuote }"
-  >
+  <div class="p-4 flex hover:bg-[rgba(0,0,0,0.03)] transition-colors">
+    <!-- :class="{ 'border border-gray-200 rounded-xl': isQuote }" -->
     <div class="mr-2 w-10 h-10 flex-none">
       <img :src="tweet.user.profilePicUrl" class="rounded-full" />
     </div>
@@ -35,7 +32,7 @@
         class="whitespace-pre-wrap"
         v-html="highlightedText"
       ></div>
-      <div v-else>{{ tweet.text }}</div>
+      <div v-else class="whitespace-pre-wrap">{{ tweet.text }}</div>
       <div id="media" class="grid grid-cols-2 gap-1 mt-3">
         <div v-for="media in tweet.media" :key="media.url">
           <img
@@ -61,8 +58,24 @@
           </div>
         </div>
       </div>
+      <!-- <div v-if="tweet.quote_status" id="qt" class="mt-3 max-h-[300px]"> -->
       <div v-if="tweet.quote_status" id="qt" class="mt-3">
-        <Tweet :tweet="tweet.quote_status" :is-quote="true" class="mb-0" />
+        <div
+          ref="quoteTweet"
+          class="max-h-[300px] overflow-hidden relative border border-gray-200 rounded-xl"
+        >
+          <Tweet
+            :tweet="tweet.quote_status"
+            :is-quote="true"
+            class="mb-0 border-none text-sm"
+          />
+          <div
+            v-if="
+              quoteTweet && quoteTweet.scrollHeight > quoteTweet.clientHeight
+            "
+            class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent"
+          ></div>
+        </div>
       </div>
     </div>
   </div>
@@ -88,4 +101,6 @@ function formatDate(dateString: string): string {
 
   return date.toLocaleDateString(undefined, format);
 }
+
+const quoteTweet = ref<HTMLElement | null>(null);
 </script>

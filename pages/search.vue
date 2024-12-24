@@ -1,5 +1,5 @@
 <template>
-  <div v-if="bookmarks" class="mt-12">
+  <div v-if="bookmarks" class="mt-12 w-full max-w-none">
     <input
       type="text"
       placeholder="Search"
@@ -15,26 +15,43 @@
       <div id="searchResults" class="mb-4">
         <SearchResult
           class="border border-gray-200 border-b-0 last:border-b-2"
-          v-for="result in searchResultsToDisplay"
+          v-for="result in displayedSearchResults"
           :result="result"
           :search-query="searchQuery"
           :key="result.item.url"
         />
       </div>
-      <div
-        class="flex gap-x-5 w-fit mx-auto"
-        v-if="searchResults && searchResultsToDisplay"
-      >
-        <Button
-          v-if="searchResults.length > searchResultsToDisplay.length"
-          class="bg-blue-twitter hover:bg-blue-twitter/90 text-white"
-          @click="showMoreResults"
-          >Show more results</Button
-        >
-        <div v-else class="italic">No more results</div>
+      <div ref="searchLoadTrigger" class="h-10 mt-4"></div>
+      <div v-if="searchLoading" class="text-center py-4">
+        Loading more results...
       </div>
     </div>
-    <BookmarkStats v-else class="mt-8" />
+    <div v-else>
+      <BookmarkStats class="mt-8" />
+      <div
+        class="relative left-1/2 -translate-x-1/2 w-screen max-w-[1400px] px-4"
+      >
+        <div class="text-center text-xl font-bold mt-8">My bookmarks</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <a
+            v-for="bookmark in displayedBookmarks"
+            :key="bookmark.url"
+            :href="bookmark.url"
+            target="_blank"
+            class="h-full"
+          >
+            <Tweet
+              :tweet="bookmark"
+              class="border border-gray-200 rounded-lg h-full"
+            />
+          </a>
+        </div>
+      </div>
+      <div ref="loadTrigger" class="h-10 mt-4"></div>
+      <div v-if="loading" class="text-center py-4">
+        Loading more bookmarks...
+      </div>
+    </div>
   </div>
   <div v-else class="mt-12 relative border-dashed border rounded-md h-[450px]">
     <div class="absolute inset-0 m-auto h-fit w-fit text-center">
@@ -52,10 +69,9 @@
 import Fuse from "fuse.js";
 import { type FuseResult } from "fuse.js";
 import { bookmarks } from "~/composables/state";
-import { useLocalStorage } from "@vueuse/core";
-import { StorageSerializers } from "@vueuse/core";
 import { Button } from "@/components/ui/button";
 import type { Tweet } from "~/types";
+import { useIntersectionObserver } from "@vueuse/core";
 
 definePageMeta({
   noRedirect: true,
@@ -64,7 +80,6 @@ definePageMeta({
 const searchQuery = ref("");
 
 const searchResults = ref<FuseResult<Tweet>[] | null>(null);
-const searchResultsToDisplay = ref<FuseResult<Tweet>[] | null>(null);
 
 let fuse: Fuse<Tweet> | null = null;
 watchEffect(() => {
@@ -83,22 +98,25 @@ watchEffect(() => {
 });
 
 watch(searchQuery, () => {
-  // the below will reinitialize searchResults and searchResultsToDisplay, since searchResultsToDisplay is initialized to first 10 elements of searchResults
-  // this way, we don't need to explicitly reinit these two by setting them to null the way we do in youtube-podcast-search
   searchResults.value =
     searchQuery.value && fuse ? fuse.search(`"${searchQuery.value}"`) : null;
-  if (searchResults.value) {
-    searchResultsToDisplay.value = searchResults.value.slice(0, 10);
-  }
 });
 
-function showMoreResults() {
-  const numCurrentlyShowingResults = searchResultsToDisplay.value?.length;
-  if (searchResults.value && numCurrentlyShowingResults) {
-    searchResultsToDisplay.value = searchResults.value.slice(
-      0,
-      numCurrentlyShowingResults + 10
-    );
-  }
-}
+const {
+  loadTrigger,
+  loading,
+  displayedItems: displayedBookmarks,
+} = useInfiniteScroller(bookmarks, {
+  initialItems: 10,
+  increment: 10,
+});
+
+const {
+  loadTrigger: searchLoadTrigger,
+  loading: searchLoading,
+  displayedItems: displayedSearchResults,
+} = useInfiniteScroller(searchResults, {
+  initialItems: 10,
+  increment: 10,
+});
 </script>
