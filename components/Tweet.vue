@@ -32,7 +32,25 @@
         class="whitespace-pre-wrap"
         v-html="highlightedText"
       ></div>
-      <div v-else class="whitespace-pre-wrap">{{ tweet.text }}</div>
+      <div v-else>
+        <div
+          ref="tweetTextRef"
+          class="whitespace-pre-wrap"
+          :class="{
+            'max-h-[150px] overflow-hidden':
+              !isTweetTextExpanded && shouldTruncate && !isQuote,
+          }"
+        >
+          {{ tweet.text }}
+        </div>
+        <button
+          v-if="shouldTruncate && !isQuote"
+          @click.prevent="isTweetTextExpanded = !isTweetTextExpanded"
+          class="text-blue-twitter text-sm hover:underline"
+        >
+          {{ isTweetTextExpanded ? "Show less" : "Show more" }}
+        </button>
+      </div>
       <div id="media" class="grid grid-cols-2 gap-1 mt-3">
         <div v-for="media in tweet.media" :key="media.url">
           <img
@@ -103,4 +121,15 @@ function formatDate(dateString: string): string {
 }
 
 const quoteTweet = ref<HTMLElement | null>(null);
+
+const isTweetTextExpanded = ref(false);
+const tweetTextRef = ref<HTMLElement | null>(null);
+const shouldTruncate = ref(false);
+// Check if content exceeds max height after mount
+onMounted(() => {
+  if (tweetTextRef.value) {
+    // Compare scrollHeight (full content height) with offsetHeight (visible height)
+    shouldTruncate.value = tweetTextRef.value.scrollHeight > 150; // 150px max height
+  }
+});
 </script>
