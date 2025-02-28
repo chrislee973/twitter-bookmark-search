@@ -11,16 +11,18 @@ export function useBookmarkChat(modelProvider) {
   const errorMessage = ref("");
 
   // // For development purposes, we limit the number of bookmarks to 100
-  if (process.env.NODE_ENV === "development") {
-    bookmarksData.value = bookmarksData.value.slice(0, 100);
-  }
+  const bookmarksToUse = ref(
+    process.env.NODE_ENV === "development"
+      ? bookmarksData.value.slice(0, 100)
+      : bookmarksData.value
+  );
   const systemMessage = {
     role: "system",
     content: `You are an AI assistant that answers questions about the user's Twitter bookmarks. When referencing a particular bookmark, you must return the exact json of that bookmark in json format.
   
   Here are the bookmarks:
   
-  ${JSON.stringify(bookmarksData.value, null, 2)}
+  ${JSON.stringify(bookmarksToUse.value, null, 2)}
   
   Provide relevant responses based on these bookmarks and the user's queries.`,
   };

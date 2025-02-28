@@ -1,23 +1,37 @@
 <template>
   <div v-if="bookmarks" class="mt-12 w-full max-w-none">
-    <input
-      type="text"
-      placeholder="Search"
-      v-model.trim="searchQuery"
-      autofocus
-      class="px-4 py-2 rounded-3xl focus:border border-none focus:outline-none focus:ring-1 focus:ring-blue-twitter placeholder:text-muted-foreground focus:bg-white w-[440px] h-[45px] mx-auto bg-[#eff3f4] block"
-    />
+    <div class="relative w-[440px] mx-auto">
+      <input
+        type="text"
+        placeholder="Search"
+        v-model.trim="searchQuery"
+        @input="handleInput"
+        @keydown="handleKeydown"
+        @click="handleClick"
+        @blur="handleBlur"
+        ref="searchInputRef"
+        autofocus
+        class="px-4 py-2 rounded-3xl focus:border border-none focus:outline-none focus:ring-1 focus:ring-blue-twitter placeholder:text-muted-foreground focus:bg-white w-full h-[45px] bg-[#eff3f4] block"
+      />
+      <UsernameSuggestions
+        :query="userSuggestionQuery"
+        :visible="isShowingSuggestions"
+        :users="uniqueUsers"
+        @select="handleUserSelect"
+        @keydown="handleSuggestionKeydown"
+      />
+    </div>
     <div v-if="searchResults" class="mt-9">
       <div class="text-center mb-2">
         Found {{ searchResults.length }} results for
-        <span class="italic">{{ searchQuery }}</span>
+        <span class="italic">{{ displayQuery }}</span>
       </div>
       <div id="searchResults" class="mb-4">
         <SearchResult
           class="border border-gray-200 border-b-0 last:border-b-2"
           v-for="result in displayedSearchResults"
           :result="result"
-          :search-query="searchQuery"
+          :search-query="displayQuery"
           :key="result.item.url"
         />
       </div>
@@ -72,14 +86,182 @@ import { bookmarks } from "~/composables/state";
 import { Button } from "@/components/ui/button";
 import type { Tweet } from "~/types";
 import { useIntersectionObserver } from "@vueuse/core";
+import { computed, ref, onMounted, watch, nextTick } from "vue";
+import {
+  useUsernameAutocomplete,
+  type User,
+} from "~/composables/useUsernameAutocomplete";
 
 definePageMeta({
   noRedirect: true,
 });
 
 const searchQuery = ref("");
+const searchInputRef = ref<HTMLInputElement | null>(null);
 
 const searchResults = ref<FuseResult<Tweet>[] | null>(null);
+
+// Username autocomplete integration
+const {
+  isShowingSuggestions,
+  userSuggestionQuery,
+  uniqueUsers,
+  cursorPosition,
+  selectUsername,
+  hideSuggestions,
+  forceShowSuggestions,
+} = useUsernameAutocomplete(bookmarks, searchQuery);
+
+// Handle input events to track cursor position
+function handleInput(event: Event) {
+  if (searchInputRef.value) {
+    const currentPos = searchInputRef.value.selectionStart || 0;
+    cursorPosition.value = currentPos;
+
+    // Check if we just typed "from:"
+    const query = searchQuery.value;
+    if (query.endsWith("from:") && currentPos === query.length) {
+      // Force show suggestions immediately
+      forceShowSuggestions();
+    }
+  }
+}
+
+// Handle click events to track cursor position
+function handleClick(event: MouseEvent) {
+  if (searchInputRef.value) {
+    cursorPosition.value = searchInputRef.value.selectionStart || 0;
+  }
+}
+
+// Handle keydown events
+function handleKeydown(event: KeyboardEvent) {
+  // Update cursor position on keydown
+  if (searchInputRef.value) {
+    cursorPosition.value = searchInputRef.value.selectionStart || 0;
+
+    // If user types ":" after "from", show suggestions immediately
+    if (
+      event.key === ":" &&
+      searchQuery.value.endsWith("from") &&
+      searchInputRef.value.selectionStart === searchQuery.value.length
+    ) {
+      // Will force show suggestions after the ":" is added
+      setTimeout(() => {
+        forceShowSuggestions();
+      }, 0);
+    }
+  }
+
+  // Hide suggestions on Escape
+  if (event.key === "Escape") {
+    hideSuggestions();
+  }
+}
+
+// Handle suggestion keydown events
+function handleSuggestionKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape") {
+    hideSuggestions();
+    // Focus back on the input
+    searchInputRef.value?.focus();
+  }
+}
+
+// Handle blur events
+function handleBlur(event: FocusEvent) {
+  // Don't hide suggestions immediately to allow clicking on them
+  setTimeout(() => {
+    hideSuggestions();
+  }, 200);
+}
+
+// Handle user selection
+function handleUserSelect(user: User) {
+  const newPosition = selectUsername(user);
+
+  // Focus back on the input and set cursor position
+  setTimeout(() => {
+    if (searchInputRef.value) {
+      searchInputRef.value.focus();
+      if (newPosition) {
+        searchInputRef.value.selectionStart = newPosition;
+        searchInputRef.value.selectionEnd = newPosition;
+      }
+    }
+  }, 0);
+}
+
+// Watch for changes in searchQuery to update cursor position
+// This helps when typing "from:" to immediately show suggestions
+watch(searchQuery, () => {
+  // Use nextTick to ensure the DOM has updated
+  nextTick(() => {
+    if (searchInputRef.value) {
+      // Get current cursor position
+      const currentPos = searchInputRef.value.selectionStart || 0;
+
+      // Check if we just typed "from:"
+      const query = searchQuery.value;
+      if (query.endsWith("from:") && currentPos === query.length) {
+        // Update cursor position
+        cursorPosition.value = currentPos;
+      }
+    }
+  });
+});
+
+const isExactMatch = computed(() => {
+  const { remainingQuery } = parseSearchQuery(searchQuery.value.trim());
+  return remainingQuery.startsWith('"') && remainingQuery.endsWith('"');
+});
+
+interface ParsedSearchQuery {
+  fromUser?: string;
+  remainingQuery: string;
+}
+
+function parseSearchQuery(query: string): ParsedSearchQuery {
+  /**
+   * Parses a search query string to extract user filter and remaining search terms
+   * @param query The search query string to parse
+   * @returns {ParsedSearchQuery} Object containing optional fromUser filter and remaining search query
+   * @example
+   * // Returns { fromUser: "john", remainingQuery: "hello world" }
+   * parseSearchQuery('from:john hello world')
+   *
+   * // Returns { fromUser: "john doe", remainingQuery: "search terms" }
+   * parseSearchQuery('from:"john doe" search terms')
+   *
+   * // Returns { remainingQuery: "just search" }
+   * parseSearchQuery('just search')
+   */
+  const fromRegex = /\bfrom:(?:"([^"]+)"|(\S+))/i;
+  const match = query.match(fromRegex);
+
+  if (!match) {
+    return { remainingQuery: query };
+  }
+
+  const username = match[1] || match[2]; // Get the captured username from either quoted or unquoted group
+  const remainingQuery = query.replace(match[0], "").trim();
+
+  return {
+    fromUser: username,
+    remainingQuery,
+  };
+}
+
+// Add a computed property for the parsed search
+const parsedSearchQuery = computed(() =>
+  parseSearchQuery(searchQuery.value.trim())
+);
+
+// Add a computed property for the display query
+const displayQuery = computed(() => {
+  const { remainingQuery } = parsedSearchQuery.value;
+  return isExactMatch.value ? remainingQuery.slice(1, -1) : remainingQuery;
+});
 
 let fuse: Fuse<Tweet> | null = null;
 watchEffect(() => {
@@ -91,15 +273,61 @@ watchEffect(() => {
       ignoreLocation: true,
       ignoreFieldNorm: false,
       includeScore: true,
-      // keys: ["text"],
       keys: ["text", "user.name", "user.handle"],
     });
   }
 });
 
+// Helper functions for search filtering
+function filterByUser(results: FuseResult<Tweet>[], username: string) {
+  const searchUser = username.toLowerCase();
+  return results.filter((result) => {
+    const handle = result.item.user?.handle?.toLowerCase();
+    const name = result.item.user?.name?.toLowerCase();
+    return handle?.includes(searchUser) || name?.includes(searchUser);
+  });
+}
+
+function filterByExactMatch(results: FuseResult<Tweet>[], query: string) {
+  const regex = new RegExp(`\\b${escapeRegexSpecialCharacters(query)}\\b`, "i");
+  return results.filter((result) =>
+    ["text", "user.name", "user.handle"].some((key) => {
+      const fieldValue = result.item[key as keyof Tweet];
+      return fieldValue && regex.test(fieldValue as string);
+    })
+  );
+}
+
+function performSearch(query: string, fromUser: string | undefined) {
+  if (!query || !fuse) {
+    return null;
+  }
+
+  let results: FuseResult<Tweet>[];
+
+  if (isExactMatch.value) {
+    const unquotedQuery = query.slice(1, -1);
+    results = fuse.search(unquotedQuery);
+    results = filterByExactMatch(results, unquotedQuery);
+  } else {
+    results = fuse.search(query);
+  }
+
+  if (fromUser) {
+    results = filterByUser(results, fromUser);
+  }
+
+  return results;
+}
+
 watch(searchQuery, () => {
-  searchResults.value =
-    searchQuery.value && fuse ? fuse.search(`"${searchQuery.value}"`) : null;
+  if (!searchQuery.value || !fuse) {
+    searchResults.value = null;
+    return;
+  }
+
+  const { fromUser, remainingQuery } = parsedSearchQuery.value;
+  searchResults.value = performSearch(remainingQuery, fromUser);
 });
 
 const {
@@ -119,4 +347,10 @@ const {
   initialItems: 10,
   increment: 10,
 });
+
+function escapeRegexSpecialCharacters(string: string) {
+  // This is a helper function to escape special characters in a string
+  // so that they are treated as literal characters in a regex
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 </script>
