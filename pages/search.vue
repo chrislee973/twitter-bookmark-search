@@ -25,6 +25,7 @@
       <div class="text-center mb-2">
         Found {{ searchResults.length }} results for
         <span class="italic">{{ displayQuery }}</span>
+        <SortDropdown v-model="sortBy" />
       </div>
       <div id="searchResults" class="mb-4">
         <SearchResult
@@ -83,14 +84,17 @@
 import Fuse from "fuse.js";
 import { type FuseResult } from "fuse.js";
 import { bookmarks } from "~/composables/state";
-import { Button } from "@/components/ui/button";
 import type { Tweet } from "~/types";
-import { useIntersectionObserver } from "@vueuse/core";
 import { computed, ref, onMounted, watch, nextTick } from "vue";
 import {
   useUsernameAutocomplete,
   type User,
 } from "~/composables/useUsernameAutocomplete";
+import {
+  useSearchSorting,
+  type SortOption,
+} from "~/composables/useSearchSorting";
+import SortDropdown from "~/components/SortDropdown.vue";
 
 definePageMeta({
   noRedirect: true,
@@ -101,6 +105,27 @@ const searchInputRef = ref<HTMLInputElement | null>(null);
 
 const searchResults = ref<FuseResult<Tweet>[] | null>(null);
 
+// Use the search sorting composable
+const { sortBy, sortedResults } = useSearchSorting(searchResults);
+
+const {
+  loadTrigger,
+  loading,
+  displayedItems: displayedBookmarks,
+} = useInfiniteScroller(bookmarks, {
+  initialItems: 10,
+  increment: 10,
+});
+
+const {
+  loadTrigger: searchLoadTrigger,
+  loading: searchLoading,
+  displayedItems: displayedSearchResults,
+} = useInfiniteScroller(sortedResults, {
+  initialItems: 10,
+  increment: 10,
+});
+
 // Username autocomplete integration
 const {
   isShowingSuggestions,
@@ -109,21 +134,12 @@ const {
   cursorPosition,
   selectUsername,
   hideSuggestions,
-  forceShowSuggestions,
 } = useUsernameAutocomplete(bookmarks, searchQuery);
 
 // Handle input events to track cursor position
 function handleInput(event: Event) {
   if (searchInputRef.value) {
-    const currentPos = searchInputRef.value.selectionStart || 0;
-    cursorPosition.value = currentPos;
-
-    // Check if we just typed "from:"
-    const query = searchQuery.value;
-    if (query.endsWith("from:") && currentPos === query.length) {
-      // Force show suggestions immediately
-      forceShowSuggestions();
-    }
+    cursorPosition.value = searchInputRef.value.selectionStart || 0;
   }
 }
 
@@ -139,18 +155,6 @@ function handleKeydown(event: KeyboardEvent) {
   // Update cursor position on keydown
   if (searchInputRef.value) {
     cursorPosition.value = searchInputRef.value.selectionStart || 0;
-
-    // If user types ":" after "from", show suggestions immediately
-    if (
-      event.key === ":" &&
-      searchQuery.value.endsWith("from") &&
-      searchInputRef.value.selectionStart === searchQuery.value.length
-    ) {
-      // Will force show suggestions after the ":" is added
-      setTimeout(() => {
-        forceShowSuggestions();
-      }, 0);
-    }
   }
 
   // Hide suggestions on Escape
@@ -178,6 +182,7 @@ function handleBlur(event: FocusEvent) {
 
 // Handle user selection
 function handleUserSelect(user: User) {
+  // Get the new cursor position after inserting the username
   const newPosition = selectUsername(user);
 
   // Focus back on the input and set cursor position
@@ -259,7 +264,13 @@ const parsedSearchQuery = computed(() =>
 
 // Add a computed property for the display query
 const displayQuery = computed(() => {
-  const { remainingQuery } = parsedSearchQuery.value;
+  const { fromUser, remainingQuery } = parsedSearchQuery.value;
+
+  // If we only have a fromUser and no remainingQuery, show a user-friendly message
+  if (fromUser && !remainingQuery) {
+    return `all bookmarks from ${fromUser}`;
+  }
+
   return isExactMatch.value ? remainingQuery.slice(1, -1) : remainingQuery;
 });
 
@@ -274,6 +285,11 @@ watchEffect(() => {
       ignoreFieldNorm: false,
       includeScore: true,
       keys: ["text", "user.name", "user.handle"],
+      // sortFn: (a, b) => {
+      //   return (
+      //     new Date(b.item.date).getTime() - new Date(a.item.date).getTime()
+      //   );
+      // },
     });
   }
 });
@@ -284,7 +300,15 @@ function filterByUser(results: FuseResult<Tweet>[], username: string) {
   return results.filter((result) => {
     const handle = result.item.user?.handle?.toLowerCase();
     const name = result.item.user?.name?.toLowerCase();
-    return handle?.includes(searchUser) || name?.includes(searchUser);
+
+    // Use exact match for handle, but allow partial match for name
+    return (
+      handle === searchUser ||
+      (name &&
+        name
+          .split(" ")
+          .some((namePart) => namePart.toLowerCase() === searchUser))
+    );
   });
 }
 
@@ -299,7 +323,35 @@ function filterByExactMatch(results: FuseResult<Tweet>[], query: string) {
 }
 
 function performSearch(query: string, fromUser: string | undefined) {
-  if (!query || !fuse) {
+  if (!fuse) {
+    return null;
+  }
+
+  // If we have a fromUser but no query, we want to show all tweets from that user
+  if (!query && fromUser) {
+    // Get all bookmarks and filter by user with exact match
+    const searchUser = fromUser.toLowerCase();
+    return bookmarks.value
+      ? bookmarks.value
+          .filter((tweet) => {
+            const handle = tweet.user?.handle?.toLowerCase();
+            const name = tweet.user?.name?.toLowerCase();
+
+            // Use exact match for handle, but allow partial match for name
+            return (
+              handle === searchUser ||
+              (name &&
+                name
+                  .split(" ")
+                  .some((namePart) => namePart.toLowerCase() === searchUser))
+            );
+          })
+          .map((item) => ({ item, score: 0, refIndex: 0 }))
+      : [];
+  }
+
+  // If no query and no fromUser, return null (no search)
+  if (!query && !fromUser) {
     return null;
   }
 
@@ -321,31 +373,21 @@ function performSearch(query: string, fromUser: string | undefined) {
 }
 
 watch(searchQuery, () => {
-  if (!searchQuery.value || !fuse) {
+  if (!fuse) {
+    // we don't check if the query is empty for cases where there's a from: operator used and the query is empty. In these cases we want to show all bookmarks from the selected user
     searchResults.value = null;
     return;
   }
 
   const { fromUser, remainingQuery } = parsedSearchQuery.value;
+
+  // If searchQuery is empty and no fromUser, clear results
+  if (!searchQuery.value && !fromUser) {
+    searchResults.value = null;
+    return;
+  }
+
   searchResults.value = performSearch(remainingQuery, fromUser);
-});
-
-const {
-  loadTrigger,
-  loading,
-  displayedItems: displayedBookmarks,
-} = useInfiniteScroller(bookmarks, {
-  initialItems: 10,
-  increment: 10,
-});
-
-const {
-  loadTrigger: searchLoadTrigger,
-  loading: searchLoading,
-  displayedItems: displayedSearchResults,
-} = useInfiniteScroller(searchResults, {
-  initialItems: 10,
-  increment: 10,
 });
 
 function escapeRegexSpecialCharacters(string: string) {

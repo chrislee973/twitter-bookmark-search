@@ -17,6 +17,7 @@ export function useUsernameAutocomplete(
   const isShowingSuggestions = ref(false);
   const userSuggestionQuery = ref("");
   const cursorPosition = ref(0);
+  const preventSuggestions = ref(false);
 
   // Extract unique users from bookmarks
   const uniqueUsers = computed(() => {
@@ -52,6 +53,8 @@ export function useUsernameAutocomplete(
 
   // Check if cursor is in a "from:" context
   const isInFromContext = computed(() => {
+    if (preventSuggestions.value) return false;
+
     if (!searchQuery.value) return false;
 
     const query = searchQuery.value;
@@ -107,12 +110,10 @@ export function useUsernameAutocomplete(
   const updateSuggestionState = useDebounceFn(() => {
     isShowingSuggestions.value = isInFromContext.value;
     userSuggestionQuery.value = currentUsername.value;
-  }, 0); // Changed from 200ms to 0ms for instant response
+  }, 200); // 200ms debounce
 
   // Watch for changes in search query or cursor position
-  watch([searchQuery, cursorPosition], updateSuggestionState, {
-    immediate: true,
-  });
+  watch([searchQuery, cursorPosition], updateSuggestionState);
 
   // Handle selecting a username suggestion
   function selectUsername(user: User) {
@@ -145,8 +146,9 @@ export function useUsernameAutocomplete(
         newQuery =
           query.substring(0, fromIndex + 5) +
           username +
+          " " +
           query.substring(endQuotePos + 1);
-        newPosition = fromIndex + 5 + username.length;
+        newPosition = fromIndex + 5 + username.length + 1; // +1 for the space
       } else {
         // Find the next space after cursor or end of string
         const nextSpacePos = query.indexOf(" ", pos);
@@ -154,8 +156,9 @@ export function useUsernameAutocomplete(
         newQuery =
           query.substring(0, fromIndex + 5) +
           username +
+          " " +
           query.substring(replaceEnd);
-        newPosition = fromIndex + 5 + username.length;
+        newPosition = fromIndex + 5 + username.length + 1; // +1 for the space
       }
     } else {
       // Find the next space after from: or end of string
@@ -164,15 +167,22 @@ export function useUsernameAutocomplete(
       newQuery =
         query.substring(0, fromIndex + 5) +
         username +
+        " " +
         query.substring(replaceEnd);
-      newPosition = fromIndex + 5 + username.length;
+      newPosition = fromIndex + 5 + username.length + 1; // +1 for the space
     }
 
     // Update the search query and cursor position
     searchQuery.value = newQuery;
 
-    // Hide suggestions
+    // Hide suggestions and prevent them from showing immediately
     isShowingSuggestions.value = false;
+    preventSuggestions.value = true;
+
+    // Reset the prevention after a short delay
+    setTimeout(() => {
+      preventSuggestions.value = false;
+    }, 300);
 
     // Return the new cursor position for the input to set
     return newPosition;
@@ -183,12 +193,6 @@ export function useUsernameAutocomplete(
     isShowingSuggestions.value = false;
   }
 
-  // Force show suggestions immediately (for use when typing "from:")
-  function forceShowSuggestions() {
-    isShowingSuggestions.value = true;
-    userSuggestionQuery.value = "";
-  }
-
   return {
     isShowingSuggestions,
     userSuggestionQuery,
@@ -196,6 +200,5 @@ export function useUsernameAutocomplete(
     cursorPosition,
     selectUsername,
     hideSuggestions,
-    forceShowSuggestions,
   };
 }
