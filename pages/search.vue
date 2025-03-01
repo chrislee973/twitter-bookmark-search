@@ -20,6 +20,7 @@
         @select="handleUserSelect"
         @keydown="handleSuggestionKeydown"
       />
+      <SearchTips />
     </div>
     <div v-if="searchResults" class="mt-9">
       <div class="text-center mb-2">
@@ -95,6 +96,7 @@ import {
   type SortOption,
 } from "~/composables/useSearchSorting";
 import SortDropdown from "~/components/SortDropdown.vue";
+import SearchTips from "~/components/SearchTips.vue";
 
 definePageMeta({
   noRedirect: true,
@@ -222,37 +224,43 @@ const isExactMatch = computed(() => {
 });
 
 interface ParsedSearchQuery {
-  fromUser?: string;
+  fromUsers: string[]; // will be an empty array if no from: operator is used
   remainingQuery: string;
 }
 
 function parseSearchQuery(query: string): ParsedSearchQuery {
   /**
-   * Parses a search query string to extract user filter and remaining search terms
+   * Parses a search query string to extract multiple user filters and remaining search terms
    * @param query The search query string to parse
-   * @returns {ParsedSearchQuery} Object containing optional fromUser filter and remaining search query
+   * @returns {ParsedSearchQuery} Object containing array of fromUsers and remaining search query
    * @example
-   * // Returns { fromUser: "john", remainingQuery: "hello world" }
+   * // Returns { fromUsers: ["john"], remainingQuery: "hello world" }
    * parseSearchQuery('from:john hello world')
    *
-   * // Returns { fromUser: "john doe", remainingQuery: "search terms" }
-   * parseSearchQuery('from:"john doe" search terms')
-   *
-   * // Returns { remainingQuery: "just search" }
-   * parseSearchQuery('just search')
+   * // Returns { fromUsers: ["john doe", "jane"], remainingQuery: "search terms" }
+   * parseSearchQuery('from:"john doe" from:jane search terms')
    */
-  const fromRegex = /\bfrom:(?:"([^"]+)"|(\S+))/i;
-  const match = query.match(fromRegex);
+  const fromUsers: string[] = [];
+  let remainingQuery = query;
 
-  if (!match) {
-    return { remainingQuery: query };
+  // Match all from: operators
+  const fromRegex = /\bfrom:(?:"([^"]+)"|(\S+))/gi;
+  let match;
+
+  while ((match = fromRegex.exec(query)) !== null) {
+    const username = match[1] || match[2]; // Get the captured username from either quoted or unquoted group
+    fromUsers.push(username);
+    // Don't modify remainingQuery yet, as it would affect regex positions
   }
 
-  const username = match[1] || match[2]; // Get the captured username from either quoted or unquoted group
-  const remainingQuery = query.replace(match[0], "").trim();
+  // Now remove all from: operators from the query
+  if (fromUsers.length > 0) {
+    // Use a new regex to remove all from: operators at once
+    remainingQuery = query.replace(/\bfrom:(?:"[^"]+"|[^\s]+)\s*/gi, "").trim();
+  }
 
   return {
-    fromUser: username,
+    fromUsers,
     remainingQuery,
   };
 }
@@ -264,11 +272,19 @@ const parsedSearchQuery = computed(() =>
 
 // Add a computed property for the display query
 const displayQuery = computed(() => {
-  const { fromUser, remainingQuery } = parsedSearchQuery.value;
+  const { fromUsers, remainingQuery } = parsedSearchQuery.value;
 
-  // If we only have a fromUser and no remainingQuery, show a user-friendly message
-  if (fromUser && !remainingQuery) {
-    return `all bookmarks from ${fromUser}`;
+  // If we only have fromUsers and no remainingQuery, show a user-friendly message
+  if (fromUsers.length > 0 && !remainingQuery) {
+    if (fromUsers.length === 1) {
+      return `all bookmarks from ${fromUsers[0]}`;
+    } else if (fromUsers.length === 2) {
+      return `all bookmarks from ${fromUsers[0]} or ${fromUsers[1]}`;
+    } else {
+      const lastUser = fromUsers[fromUsers.length - 1];
+      const otherUsers = fromUsers.slice(0, -1);
+      return `all bookmarks from ${otherUsers.join(", ")} or ${lastUser}`;
+    }
   }
 
   return isExactMatch.value ? remainingQuery.slice(1, -1) : remainingQuery;
@@ -322,36 +338,38 @@ function filterByExactMatch(results: FuseResult<Tweet>[], query: string) {
   );
 }
 
-function performSearch(query: string, fromUser: string | undefined) {
+function performSearch(query: string, fromUsers: string[]) {
   if (!fuse) {
     return null;
   }
 
-  // If we have a fromUser but no query, we want to show all tweets from that user
-  if (!query && fromUser) {
-    // Get all bookmarks and filter by user with exact match
-    const searchUser = fromUser.toLowerCase();
+  // If we have fromUsers but no query, we want to show all tweets from those users
+  if (!query && fromUsers.length > 0) {
+    // Get all bookmarks and filter by users with exact match
     return bookmarks.value
       ? bookmarks.value
           .filter((tweet) => {
             const handle = tweet.user?.handle?.toLowerCase();
             const name = tweet.user?.name?.toLowerCase();
 
-            // Use exact match for handle, but allow partial match for name
-            return (
-              handle === searchUser ||
-              (name &&
-                name
-                  .split(" ")
-                  .some((namePart) => namePart.toLowerCase() === searchUser))
-            );
+            // Check if any of the usernames match
+            return fromUsers.some((fromUser) => {
+              const searchUser = fromUser.toLowerCase();
+              return (
+                handle === searchUser ||
+                (name &&
+                  name
+                    .split(" ")
+                    .some((namePart) => namePart.toLowerCase() === searchUser))
+              );
+            });
           })
           .map((item) => ({ item, score: 0, refIndex: 0 }))
       : [];
   }
 
-  // If no query and no fromUser, return null (no search)
-  if (!query && !fromUser) {
+  // If no query and no fromUsers, return null (no search)
+  if (!query && fromUsers.length === 0) {
     return null;
   }
 
@@ -365,8 +383,24 @@ function performSearch(query: string, fromUser: string | undefined) {
     results = fuse.search(query);
   }
 
-  if (fromUser) {
-    results = filterByUser(results, fromUser);
+  if (fromUsers.length > 0) {
+    // Filter results to include tweets from any of the specified users
+    results = results.filter((result) => {
+      const handle = result.item.user?.handle?.toLowerCase();
+      const name = result.item.user?.name?.toLowerCase();
+
+      // Check if any of the usernames match
+      return fromUsers.some((fromUser) => {
+        const searchUser = fromUser.toLowerCase();
+        return (
+          handle === searchUser ||
+          (name &&
+            name
+              .split(" ")
+              .some((namePart) => namePart.toLowerCase() === searchUser))
+        );
+      });
+    });
   }
 
   return results;
@@ -374,20 +408,20 @@ function performSearch(query: string, fromUser: string | undefined) {
 
 watch(searchQuery, () => {
   if (!fuse) {
-    // we don't check if the query is empty for cases where there's a from: operator used and the query is empty. In these cases we want to show all bookmarks from the selected user
+    // we don't check if the query is empty for cases where there's a from: operator used and the query is empty. In these cases we want to show all bookmarks from the selected users
     searchResults.value = null;
     return;
   }
 
-  const { fromUser, remainingQuery } = parsedSearchQuery.value;
+  const { fromUsers, remainingQuery } = parsedSearchQuery.value;
 
-  // If searchQuery is empty and no fromUser, clear results
-  if (!searchQuery.value && !fromUser) {
+  // If searchQuery is empty and no fromUsers, clear results
+  if (!searchQuery.value && fromUsers.length === 0) {
     searchResults.value = null;
     return;
   }
 
-  searchResults.value = performSearch(remainingQuery, fromUser);
+  searchResults.value = performSearch(remainingQuery, fromUsers);
 });
 
 function escapeRegexSpecialCharacters(string: string) {
