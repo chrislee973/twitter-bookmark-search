@@ -74,7 +74,7 @@
         <div class="mt-3 text-xs text-gray-500 border-t border-gray-100 pt-2">
           Tip: You can combine filters, e.g.
           <code class="bg-gray-100 px-1 rounded"
-            >from:elonmusk "rocket launch"</code
+            >from:simonw "open source"</code
           >
         </div>
       </div>
