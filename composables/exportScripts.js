@@ -10,6 +10,63 @@ export const escapedCode = `// script modified and adapted from https://gist.git
     );
     return;
   }
+
+  // Create and show progress indicator
+  const progressContainer = document.createElement("div");
+  progressContainer.style.cssText = \`
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  \`;
+
+  const progressHeader = document.createElement("div");
+  progressHeader.style.cssText = \`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  \`;
+
+  const spinner = document.createElement("div");
+  spinner.style.cssText = \`
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+  \`;
+
+  const spinnerStyle = document.createElement("style");
+  spinnerStyle.textContent = \`
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  \`;
+  document.head.appendChild(spinnerStyle);
+
+  const progressText = document.createElement("div");
+  progressText.style.cssText = \`
+    font-size: 14px;
+  \`;
+
+  progressHeader.appendChild(spinner);
+  progressHeader.appendChild(progressText);
+  progressContainer.appendChild(progressHeader);
+  document.body.appendChild(progressContainer);
+
+  // Function to update progress
+  function updateProgress(message) {
+    progressText.textContent = message;
+  }
+
   // Save the original XMLHttpRequest object
   var originalXHR = window.XMLHttpRequest;
   var hasProcessLikesBeenCalled = false; // Flag variable
@@ -140,6 +197,15 @@ export const escapedCode = `// script modified and adapted from https://gist.git
           tweetData.extended_entities?.media ?? tweetData.entities.media;
         let quoteStatus = null;
 
+        // Collect short/expanded URLs into a separate "links" array
+        let linkArray = [];
+        if (tweetData.entities?.urls && tweetData.entities.urls.length > 0) {
+          linkArray = tweetData.entities.urls.map((urlObj) => ({
+            shortUrl: urlObj.url,
+            expandedUrl: urlObj.expanded_url,
+          }));
+        }
+
         if (quotedTweetData) {
           const quotedTweetResult =
             quotedTweetData.result.tweet ?? quotedTweetData.result;
@@ -169,6 +235,7 @@ export const escapedCode = `// script modified and adapted from https://gist.git
           // reply_count: tweetData.reply_count,
           // retweet_count: tweetData.retweet_count,
           // is_self_thread: Boolean(tweetData.self_thread),
+          links: linkArray,
           user: {
             id: userData.id_str,
             name: userData.name,
@@ -297,22 +364,26 @@ export const escapedCode = `// script modified and adapted from https://gist.git
       .replace(/%22cursor.*?%2C/, "")
       .replace(/count.*?%2C/, \`count%22%3A\${TWEETS_PER_REQUEST}%2C\`);
 
+    updateProgress("Starting to fetch bookmarks...");
+    let requestCount = 0;
+
     do {
       if (cursorBottom) {
-        // matches "cursor" followed by any characters up to the next comma
         bookmarksUrl = bookmarksUrl.includes("cursor")
           ? bookmarksUrl.replace(
               /cursor.*?%2C/,
               encodeURIComponent(\`cursor":"\${cursorBottom}",\`)
             )
-          : // matches "variables={"
-            bookmarksUrl.replace(
+          : bookmarksUrl.replace(
               /variables=%7B/,
               "variables=" + encodeURIComponent(\`{"cursor":"\${cursorBottom}",\`)
             );
       }
 
       try {
+        updateProgress(
+          \`Extracting bookmarks (\${tweets.length} liberated so far)...\`
+        );
         const response = await fetchWithCredentials(
           bookmarksUrl,
           {},
@@ -320,6 +391,7 @@ export const escapedCode = `// script modified and adapted from https://gist.git
           authorization_token
         );
         tweets = tweets.concat(parseTweetsFromJsonAPIResponse(response));
+        requestCount++;
 
         const cursorEntry =
           response.data.bookmark_timeline_v2.timeline.instructions[0].entries.find(
@@ -333,18 +405,86 @@ export const escapedCode = `// script modified and adapted from https://gist.git
         }
       } catch (error) {
         console.error(error);
+        updateProgress("Error occurred while fetching bookmarks");
+
+        // Create error message with retry button
+        const errorContainer = document.createElement("div");
+        errorContainer.style.cssText = \`
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          z-index: 10000;
+          text-align: center;
+          max-width: 400px;
+        \`;
+
+        const errorMessage = document.createElement("div");
+        errorMessage.style.cssText = \`
+          color: #e0245e;
+          margin-bottom: 15px;
+          font-weight: 500;
+        \`;
+        errorMessage.textContent =
+          "An error occurred while fetching your bookmarks. Would you like to try again?";
+
+        const retryButton = document.createElement("button");
+        retryButton.style.cssText = \`
+          background: #1d9bf0;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: 500;
+        \`;
+        retryButton.textContent = "Try Again";
+        retryButton.onclick = () => {
+          errorContainer.remove();
+          processLikes(x_csrf_token, authorization_token);
+        };
+
+        const cancelButton = document.createElement("button");
+        cancelButton.style.cssText = \`
+          background: #eff3f4;
+          color: #0f1419;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: 500;
+          margin-left: 10px;
+        \`;
+        cancelButton.textContent = "Cancel";
+        cancelButton.onclick = () => {
+          errorContainer.remove();
+          progressContainer.remove();
+        };
+
+        errorContainer.appendChild(errorMessage);
+        errorContainer.appendChild(retryButton);
+        errorContainer.appendChild(cancelButton);
+        document.body.appendChild(errorContainer);
         break;
       }
     } while (cursorBottom && cursorTop !== cursorBottom);
 
+    updateProgress(
+      \`Processing complete! Found \${tweets.length} bookmarks\`,
+      100
+    );
     console.log("Bookmarks processed:", tweets.length);
     // const tweetsJson = JSON.stringify(tweets, null, 2);
-    const version = 1.02;
+    const version = 1.03;
     const tweetsData = {
       version: version,
       data: tweets,
     };
-    const tweetsJson = JSON.stringify(tweetsData, null, 2); // Convert the array to JSON
+    const tweetsJson = JSON.stringify(tweetsData, null, 2);
 
     const blob = new Blob([tweetsJson], { type: "application/json" });
     const dataUrl = URL.createObjectURL(blob);
@@ -354,6 +494,12 @@ export const escapedCode = `// script modified and adapted from https://gist.git
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+
+    // Remove progress indicator after 3 seconds
+    setTimeout(() => {
+      progressContainer.remove();
+    }, 3000);
+
     console.log("Download complete");
   }
 })();
@@ -371,6 +517,63 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
     );
     return;
   }
+
+  // Create and show progress indicator
+  const progressContainer = document.createElement("div");
+  progressContainer.style.cssText = \`
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  \`;
+
+  const progressHeader = document.createElement("div");
+  progressHeader.style.cssText = \`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  \`;
+
+  const spinner = document.createElement("div");
+  spinner.style.cssText = \`
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+  \`;
+
+  const spinnerStyle = document.createElement("style");
+  spinnerStyle.textContent = \`
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  \`;
+  document.head.appendChild(spinnerStyle);
+
+  const progressText = document.createElement("div");
+  progressText.style.cssText = \`
+    font-size: 14px;
+  \`;
+
+  progressHeader.appendChild(spinner);
+  progressHeader.appendChild(progressText);
+  progressContainer.appendChild(progressHeader);
+  document.body.appendChild(progressContainer);
+
+  // Function to update progress
+  function updateProgress(message) {
+    progressText.textContent = message;
+  }
+
   // Save the original XMLHttpRequest object
   var originalXHR = window.XMLHttpRequest;
   var hasProcessLikesBeenCalled = false; // Flag variable
@@ -501,6 +704,15 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
           tweetData.extended_entities?.media ?? tweetData.entities.media;
         let quoteStatus = null;
 
+        // Collect short/expanded URLs into a separate "links" array
+        let linkArray = [];
+        if (tweetData.entities?.urls && tweetData.entities.urls.length > 0) {
+          linkArray = tweetData.entities.urls.map((urlObj) => ({
+            shortUrl: urlObj.url,
+            expandedUrl: urlObj.expanded_url,
+          }));
+        }
+
         if (quotedTweetData) {
           const quotedTweetResult =
             quotedTweetData.result.tweet ?? quotedTweetData.result;
@@ -530,6 +742,7 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
           // reply_count: tweetData.reply_count,
           // retweet_count: tweetData.retweet_count,
           // is_self_thread: Boolean(tweetData.self_thread),
+          links: linkArray,
           user: {
             id: userData.id_str,
             name: userData.name,
@@ -658,22 +871,26 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
       .replace(/%22cursor.*?%2C/, "")
       .replace(/count.*?%2C/, \`count%22%3A\${TWEETS_PER_REQUEST}%2C\`);
 
+    updateProgress("Starting to fetch bookmarks...");
+    let requestCount = 0;
+
     do {
       if (cursorBottom) {
-        // matches "cursor" followed by any characters up to the next comma
         bookmarksUrl = bookmarksUrl.includes("cursor")
           ? bookmarksUrl.replace(
               /cursor.*?%2C/,
               encodeURIComponent(\`cursor":"\${cursorBottom}",\`)
             )
-          : // matches "variables={"
-            bookmarksUrl.replace(
+          : bookmarksUrl.replace(
               /variables=%7B/,
               "variables=" + encodeURIComponent(\`{"cursor":"\${cursorBottom}",\`)
             );
       }
 
       try {
+        updateProgress(
+          \`Extracting bookmarks (\${tweets.length} liberated so far)...\`
+        );
         const response = await fetchWithCredentials(
           bookmarksUrl,
           {},
@@ -681,6 +898,7 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
           authorization_token
         );
         tweets = tweets.concat(parseTweetsFromJsonAPIResponse(response));
+        requestCount++;
 
         const cursorEntry =
           response.data.bookmark_timeline_v2.timeline.instructions[0].entries.find(
@@ -694,18 +912,86 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
         }
       } catch (error) {
         console.error(error);
+        updateProgress("Error occurred while fetching bookmarks");
+
+        // Create error message with retry button
+        const errorContainer = document.createElement("div");
+        errorContainer.style.cssText = \`
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          z-index: 10000;
+          text-align: center;
+          max-width: 400px;
+        \`;
+
+        const errorMessage = document.createElement("div");
+        errorMessage.style.cssText = \`
+          color: #e0245e;
+          margin-bottom: 15px;
+          font-weight: 500;
+        \`;
+        errorMessage.textContent =
+          "An error occurred while fetching your bookmarks. Would you like to try again?";
+
+        const retryButton = document.createElement("button");
+        retryButton.style.cssText = \`
+          background: #1d9bf0;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: 500;
+        \`;
+        retryButton.textContent = "Try Again";
+        retryButton.onclick = () => {
+          errorContainer.remove();
+          processLikes(x_csrf_token, authorization_token);
+        };
+
+        const cancelButton = document.createElement("button");
+        cancelButton.style.cssText = \`
+          background: #eff3f4;
+          color: #0f1419;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 20px;
+          cursor: pointer;
+          font-weight: 500;
+          margin-left: 10px;
+        \`;
+        cancelButton.textContent = "Cancel";
+        cancelButton.onclick = () => {
+          errorContainer.remove();
+          progressContainer.remove();
+        };
+
+        errorContainer.appendChild(errorMessage);
+        errorContainer.appendChild(retryButton);
+        errorContainer.appendChild(cancelButton);
+        document.body.appendChild(errorContainer);
         break;
       }
     } while (cursorBottom && cursorTop !== cursorBottom);
 
+    updateProgress(
+      \`Processing complete! Found \${tweets.length} bookmarks\`,
+      100
+    );
     console.log("Bookmarks processed:", tweets.length);
     // const tweetsJson = JSON.stringify(tweets, null, 2);
-    const version = 1.02;
+    const version = 1.03;
     const tweetsData = {
       version: version,
       data: tweets,
     };
-    const tweetsJson = JSON.stringify(tweetsData, null, 2); // Convert the array to JSON
+    const tweetsJson = JSON.stringify(tweetsData, null, 2);
 
     const blob = new Blob([tweetsJson], { type: "application/json" });
     const dataUrl = URL.createObjectURL(blob);
@@ -715,6 +1001,12 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+
+    // Remove progress indicator after 3 seconds
+    setTimeout(() => {
+      progressContainer.remove();
+    }, 3000);
+
     console.log("Download complete");
   }
 })();

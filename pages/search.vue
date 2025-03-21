@@ -300,7 +300,7 @@ watchEffect(() => {
       ignoreLocation: true,
       ignoreFieldNorm: false,
       includeScore: true,
-      keys: ["text", "user.name", "user.handle"],
+      keys: ["text", "user.name", "user.handle", "links.expandedUrl"],
       // sortFn: (a, b) => {
       //   return (
       //     new Date(b.item.date).getTime() - new Date(a.item.date).getTime()

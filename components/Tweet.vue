@@ -41,7 +41,12 @@
               !isTweetTextExpanded && shouldTruncate && !isQuote,
           }"
         >
-          {{ tweet.text }}
+          <template v-if="tweet.links && tweet.links.length > 0">
+            {{ getUrlExpandedText() }}
+          </template>
+          <template v-else>
+            {{ tweet.text }}
+          </template>
         </div>
         <button
           v-if="shouldTruncate && !isQuote"
@@ -101,12 +106,23 @@
 
 <script setup lang="ts">
 import type { Tweet } from "~/types";
+import { useUrlExpansion } from "~/composables/useUrlExpansion";
+
 const props = defineProps<{
   tweet: Tweet;
   highlightedUserHandle?: string;
   highlightedText?: string;
   isQuote?: boolean;
 }>();
+
+const { expandUrls } = useUrlExpansion();
+
+function getUrlExpandedText() {
+  if (!props.tweet.links || props.tweet.links.length === 0) {
+    return props.tweet.text;
+  }
+  return expandUrls(props.tweet.text, props.tweet.links);
+}
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);

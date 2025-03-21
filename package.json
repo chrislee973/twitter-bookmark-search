@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "npm run generateExportScripts && nuxt build",
-    "dev": "nuxt dev",
+    "dev": "npm run generateExportScripts && nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
