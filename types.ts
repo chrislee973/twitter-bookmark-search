@@ -25,11 +25,17 @@ interface VideoSource {
   bitrate?: number;
 }
 
+export interface Link {
+  shortUrl: string;
+  expandedUrl: string;
+}
+
 export interface Tweet {
   id: string;
   date: string;
   text: string;
   url: string;
+  links: Link[];
   user: User;
   media: MediaEntity[];
   quote_status: Tweet | null;
