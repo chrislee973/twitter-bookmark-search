@@ -56,9 +56,7 @@ export function useBookmarks() {
       }
     });
 
-    return Array.from(usersToCounts.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    return Array.from(usersToCounts.values()).sort((a, b) => b.count - a.count);
   });
 
   return {

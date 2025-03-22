@@ -17,14 +17,21 @@
     </div>
 
     <!-- <BookmarkedUserStats /> -->
-    <div class="text-lg font-semibold text-center">
-      My 10 most bookmarked users
+    <div class="text-lg font-semibold text-center mb-2">
+      My most bookmarked users
     </div>
-    <div>
+
+    <!-- User list container with proper borders -->
+    <div
+      class="w-[600px] mx-auto border border-border rounded-xl overflow-hidden"
+    >
       <div
-        v-for="{ user, count } in mostBookmarkedUsers"
+        v-for="({ user, count }, index) in mostBookmarkedUsers?.slice(
+          0,
+          numberBookmarkedUsersToDisplay
+        ) || []"
         :key="user.handle"
-        class="p-2 flex w-[600px] mx-auto justify-between border border-border border-b-0 last:border-b first:rounded-t-xl last:rounded-b-xl"
+        class="p-2 flex justify-between border-b border-border last:border-b-0"
       >
         <div class="flex gap-3 items-center">
           <img :src="user.profilePicUrl" class="rounded-full w-8 h-8" alt="" />
@@ -39,9 +46,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Show More button -->
+    <div
+      v-if="
+        mostBookmarkedUsers &&
+        mostBookmarkedUsers.length > numberBookmarkedUsersToDisplay
+      "
+      class="text-center mt-4"
+    >
+      <Button @click="numberBookmarkedUsersToDisplay += 20" variant="outline">
+        Show More Users
+      </Button>
+    </div>
+
+    <!-- Counter text -->
+    <div class="text-center text-sm text-muted-foreground mt-2">
+      Showing
+      {{
+        Math.min(
+          numberBookmarkedUsersToDisplay,
+          mostBookmarkedUsers?.length || 0
+        )
+      }}
+      of {{ mostBookmarkedUsers?.length || 0 }} bookmarked users
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { bookmarks, mostBookmarkedUsers } from "~/composables/state";
+import Button from "~/components/ui/button/Button.vue";
+
+// Counter for number of users to display
+const numberBookmarkedUsersToDisplay = ref(10);
 </script>

@@ -64,7 +64,7 @@
               >
             </div>
             <div class="text-xs text-gray-500 mt-1">
-              Finds tweets with the exact phrase<br />
+              Finds tweets that contain the exact query<br />
               Example:
               <code class="bg-gray-100 px-1 rounded">"machine learning"</code>
             </div>
