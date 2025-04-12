@@ -21,6 +21,7 @@
     "@ai-sdk/google": "^0.0.55",
     "@ai-sdk/openai": "^0.0.66",
     "@tailwindcss/typography": "^0.5.15",
+    "@types/sql.js": "^1.4.9",
     "@vercel/analytics": "^1.2.2",
     "ai": "^3.4.9",
     "class-variance-authority": "^0.7.0",
@@ -29,6 +30,7 @@
     "lucide-vue-next": "^0.338.0",
     "markdown-it": "^14.1.0",
     "radix-vue": "^1.4.8",
+    "sql.js": "^1.13.0",
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7"
   }
