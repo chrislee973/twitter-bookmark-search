@@ -44,14 +44,6 @@
         <NuxtLink
           active-class="font-semibold border-b-2 border-blue-twitter !text-blue-twitter"
           class="text-foreground/60 flex items-center gap-0.5"
-          to="/chat"
-        >
-          <Icon name="mynaui:sparkles-solid" class="w-4 h-4" />
-          AI Chat
-        </NuxtLink>
-        <NuxtLink
-          active-class="font-semibold border-b-2 border-blue-twitter !text-blue-twitter"
-          class="text-foreground/60 flex items-center gap-0.5"
           to="/export"
         >
           <Icon name="mingcute-plugin-2-fill" class="w-4 h-4" />

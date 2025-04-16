@@ -2,6 +2,41 @@
   <div class="w-full my-8">
     <h2 class="text-2xl font-bold mb-4">Claude Plugin</h2>
 
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <h3 class="text-blue-800 font-medium mb-2 flex items-center">
+        <Icon name="heroicons:information-circle" class="w-5 h-5 mr-2" />
+        About SQLite Export
+      </h3>
+      <p>
+        Want to chat with and analyze your bookmarks directly in Claude Desktop?
+      </p>
+      <p>
+        MCP servers are like plugins for Claude Deskop that give it access to
+        external data like your bookmarks. Click the button below to download a
+        sqlite database file of your bookmarks, then
+        <a
+          href="https://github.com/chrislee973/twitter-bookmark-mcp"
+          target="_blank"
+          class="text-blue-600 underline"
+          >follow these instructions</a
+        >
+        to set up the plugin (MCP Server) that connects your bookmarks database
+        file to Claude Desktop. Then you can start asking questions like:
+      </p>
+
+      <ul class="text-sm text-blue-700 pl-5 mb-3 list-disc space-y-1.5">
+        <li>
+          "Return the abstracts of my 5 most recent bookmarked arxiv papers"
+        </li>
+        <li>
+          "Look through my twitter bookmarks for bookmarks that contain a link
+          to the blog lesswrong, and summarize the content of each of those blog
+          posts"
+        </li>
+        <li>"Create a chart of my bookmark frequency over time"</li>
+      </ul>
+    </div>
+
     <!-- <div
       v-if="!bookmarks"
       class="rounded-lg bg-amber-50 p-4 border border-amber-200 mb-6"
@@ -28,20 +63,20 @@
     </div>
 
     <div v-else>
-      <p class="mb-4 text-muted-foreground">
+      <!-- <p class="mb-4 text-muted-foreground">
         Convert your bookmarks to a SQLite database for more powerful querying
         and offline analysis.
-      </p>
+      </p> -->
 
       <ClientOnly>
         <div class="mt-4 space-y-4">
           <Button
             @click="convertToSqlite"
-            :disabled="isConverting || sqlLoading"
+            :disabled="isProcessing"
             class="w-full"
           >
             <Icon
-              v-if="isConverting || sqlLoading"
+              v-if="isProcessing"
               name="heroicons:arrow-path"
               class="w-5 h-5 mr-2 animate-spin"
             />
@@ -50,7 +85,9 @@
               name="heroicons:document-arrow-down"
               class="w-5 h-5 mr-2"
             />
-            {{ buttonText }}
+            {{
+              isProcessing ? "Converting..." : "Download my bookmarks database"
+            }}
           </Button>
         </div>
       </ClientOnly>
@@ -61,33 +98,28 @@
 <script setup lang="ts">
 import { bookmarks } from "~/composables/state";
 
-const isConverting = ref(false);
-const sqlLoading = ref(false);
-const sqlLoadError = ref<Error | null>(null);
-
-const buttonText = computed(() => {
-  if (sqlLoading.value) return "Loading SQL.js...";
-  if (isConverting.value) return "Converting...";
-  if (sqlLoadError.value) return "Error loading SQL.js";
-  return "Convert and Download SQLite DB";
-});
-
 // Global reference to the SQL.js instance
 let SQL: any = null;
+
+// Single state for tracking conversion process
+const isProcessing = ref(false);
+const processingError = ref<Error | null>(null);
 
 async function convertToSqlite() {
   if (!bookmarks.value) return;
 
   try {
+    // Start processing - this covers both SQL loading and conversion
+    isProcessing.value = true;
+    processingError.value = null;
+
     // If SQL.js isn't loaded yet, load it first
     if (!SQL) {
-      sqlLoading.value = true;
       SQL = await loadCustomSqlJs();
-      sqlLoading.value = false;
     }
 
-    // Proceed with conversion
-    isConverting.value = true;
+    // Ensure the UI updates by waiting for the next microtask
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Create a database
     const db = new SQL.Database();
@@ -252,12 +284,15 @@ async function convertToSqlite() {
     URL.revokeObjectURL(url);
     db.close();
   } catch (error) {
-    console.error("Error converting to SQLite:", error);
+    console.error("Error during conversion:", error);
     alert("An error occurred during conversion. Please try again.");
-    sqlLoadError.value =
+    processingError.value =
       error instanceof Error ? error : new Error(String(error));
   } finally {
-    isConverting.value = false;
+    isProcessing.value = false;
+
+    // Reset SQL instance to ensure a fresh start on next conversion
+    SQL = null;
   }
 }
 
@@ -275,25 +310,23 @@ async function loadCustomSqlJs(): Promise<any> {
       const script = document.createElement("script");
       script.src = scriptPath;
       script.onload = () => resolve();
-      script.onerror = () =>
-        reject(new Error(`Failed to load SQL.js from ${scriptPath}`));
+      script.onerror = () => reject(new Error(`Failed to load custom SQL.js`));
       document.head.appendChild(script);
     });
 
     // Initialize SQL.js with the custom WASM file
     // @ts-expect-error - initSqlJs is added to window by the script
-    return await window.initSqlJs({
+    return await initSqlJs({
       locateFile: () => wasmPath,
     });
   } catch (error) {
     console.error("Failed to load custom SQL.js:", error);
     throw new Error(
-      "Could not load SQL.js with FTS5 support. Please try again."
+      "Could not load custom SQL database library. Please try again."
     );
   }
 }
 
-// Helper function to parse date strings like in json_to_sqlite.py
 function parseDateString(dateStr: string): string | null {
   if (!dateStr) return null;
 
