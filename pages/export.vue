@@ -1,30 +1,29 @@
 <template>
   <div class="w-full my-8">
-    <h2 class="text-2xl font-bold mb-4">Claude Plugin</h2>
+    <h2 class="text-2xl font-bold mb-4">Chat with your bookmarks</h2>
 
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-      <h3 class="text-blue-800 font-medium mb-2 flex items-center">
-        <Icon name="heroicons:information-circle" class="w-5 h-5 mr-2" />
-        About SQLite Export
-      </h3>
-      <p>
-        Want to chat with and analyze your bookmarks directly in Claude Desktop?
+    <div>
+      <p class="mb-3">
+        You can chat with and analyze your bookmarks directly in Claude Desktop
+        via MCP Server. MCP servers are like plugins for Claude Desktop that
+        give it access to external data like your bookmarks. A bit like browser
+        extensions.
       </p>
       <p>
-        MCP servers are like plugins for Claude Deskop that give it access to
-        external data like your bookmarks. Click the button below to download a
-        sqlite database file of your bookmarks, then
+        Click the button below to download a sqlite database file of your
+        bookmarks, then
         <a
           href="https://github.com/chrislee973/twitter-bookmark-mcp"
           target="_blank"
           class="text-blue-600 underline"
           >follow these instructions</a
         >
-        to set up the plugin (MCP Server) that connects your bookmarks database
-        file to Claude Desktop. Then you can start asking questions like:
+        to set up the MCP Server that connects this database to Claude Desktop
+        (fair warning though, right now the setup process for MCP servers is
+        pretty tedious and finicky). Then you can start asking questions like:
       </p>
 
-      <ul class="text-sm text-blue-700 pl-5 mb-3 list-disc space-y-1.5">
+      <ul class="text-sm pl-5 mb-3 list-disc space-y-1.5 mt-2">
         <li>
           "Return the abstracts of my 5 most recent bookmarked arxiv papers"
         </li>
