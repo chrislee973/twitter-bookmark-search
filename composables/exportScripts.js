@@ -69,7 +69,8 @@ export const escapedCode = `// script modified and adapted from https://gist.git
 
   // Save the original XMLHttpRequest object
   var originalXHR = window.XMLHttpRequest;
-  var hasProcessLikesBeenCalled = false; // Flag variable
+  var hasProcessBookmarksBeenCalled = false; // Flag variable
+  let skippedBookmarks = []; // Track skipped bookmarks
 
   // Define a new XMLHttpRequest
   function newXHR() {
@@ -93,7 +94,7 @@ export const escapedCode = `// script modified and adapted from https://gist.git
     const originalSend = realXHR.send;
     realXHR.send = function (body) {
       realXHR.addEventListener("readystatechange", function () {
-        if (!hasProcessLikesBeenCalled) {
+        if (!hasProcessBookmarksBeenCalled) {
           if (realXHR.readyState === 4) {
             const clientEventPattern =
               /^(https:\\/\\/(twitter\\.com|x\\.com)\\/i\\/api\\/.*\\/client_event\\.json)$/;
@@ -140,9 +141,9 @@ export const escapedCode = `// script modified and adapted from https://gist.git
                   "font-weight: normal"
                 );
 
-                console.log("Credentials gathered... Processing likes");
-                hasProcessLikesBeenCalled = true;
-                processLikes(x_csrf_token, authorization_token);
+                console.log("Credentials gathered... Processing bookmarks");
+                hasProcessBookmarksBeenCalled = true;
+                processBookmarks(x_csrf_token, authorization_token);
               } else {
                 console.log("Missing credentials. Continuing to intercept...");
               }
@@ -166,7 +167,7 @@ export const escapedCode = `// script modified and adapted from https://gist.git
   // Scroll the window to trigger a client_event request or Likes API call
   function scrollWindow() {
     window.scrollBy(0, window.innerHeight);
-    if (hasProcessLikesBeenCalled) {
+    if (hasProcessBookmarksBeenCalled) {
       clearInterval(scrollInterval);
     }
   }
@@ -178,10 +179,6 @@ export const escapedCode = `// script modified and adapted from https://gist.git
       console.log(
         "entryResult",
         entryResult,
-        "tweetDataLegacy",
-        entryResult.legacy,
-        "userData",
-        userData,
         "quotedTweetData",
         quotedTweetData
       );
@@ -218,7 +215,6 @@ export const escapedCode = `// script modified and adapted from https://gist.git
             userLegacyData.id_str =
               quotedTweetResult.core.user_results.result.rest_id;
             quoteStatus = constructTweetObject(
-              // legacyData.legacy,
               quotedTweetResult,
               userLegacyData,
               null
@@ -228,13 +224,9 @@ export const escapedCode = `// script modified and adapted from https://gist.git
 
         return {
           id: tweetData.id_str,
-          // conversation_id: tweetData.conversation_id_str,
           date: new Date(tweetData.created_at).toISOString(),
           text: fullText,
           url: \`https://twitter.com/\${userData.screen_name}/status/\${tweetData.id_str}\`,
-          // reply_count: tweetData.reply_count,
-          // retweet_count: tweetData.retweet_count,
-          // is_self_thread: Boolean(tweetData.self_thread),
           links: linkArray,
           user: {
             id: userData.id_str,
@@ -247,7 +239,6 @@ export const escapedCode = `// script modified and adapted from https://gist.git
             ? mediaEntities.map((media) => ({
                 type: media.type,
                 url: media.media_url_https,
-                // media_url: media.expanded_url,
                 video_src:
                   media.type === "video" || media.type === "animated_gif"
                     ? media.video_info.variants
@@ -269,25 +260,24 @@ export const escapedCode = `// script modified and adapted from https://gist.git
     entries.forEach((item) => {
       // don't process cursor entries
       if (item.content.entryType === "TimelineTimelineItem") {
-        const entryResult = item.content.itemContent.tweet_results.result;
-        const tweetLegacy = entryResult.legacy;
-        // check if tweet is underfined. This happens when tweet is deleted or removed (will show up as 'This post is unavailable' in timeline)
-        if (tweetLegacy === undefined) {
-          console.log(
-            "Tweet object undefined. It was probably deleted or removed: ",
-            item.content
-          );
+        const entryResult =
+          item.content.itemContent.tweet_results.result.__typename ===
+          "TweetWithVisibilityResults"
+            ? item.content.itemContent.tweet_results.result.tweet // unwrap the real tweet
+            : item.content.itemContent.tweet_results.result;
+
+        // Check if entryResult and its legacy property exist
+        if (!entryResult || !entryResult.legacy) {
+          skippedBookmarks.push(item);
           return;
         }
-        if (
-          entryResult.__typename === "Tweet" &&
-          entryResult.core?.user_results?.result?.legacy
-        ) {
+
+        if (entryResult.core?.user_results?.result?.legacy) {
           let quotedTweet = null;
           let user = entryResult.core.user_results.result.legacy;
           user.id_str = entryResult.core.user_results.result.rest_id;
 
-          if (tweetLegacy.is_quote_status) {
+          if (entryResult.legacy.is_quote_status) {
             quotedTweet = entryResult.quoted_status_result;
             // We check if quotedTweet is an empty object to catch cases where the quoted tweet was deleted
             if (Object.keys(quotedTweet).length === 0) {
@@ -296,12 +286,13 @@ export const escapedCode = `// script modified and adapted from https://gist.git
           }
 
           const tweetObject = constructTweetObject(
-            // tweetLegacy,
             entryResult,
             user,
             quotedTweet
           );
-          parsedTweets.push(tweetObject);
+          if (tweetObject) {
+            parsedTweets.push(tweetObject);
+          }
         }
       }
     });
@@ -353,7 +344,7 @@ export const escapedCode = `// script modified and adapted from https://gist.git
     return await response.json();
   }
 
-  async function processLikes(x_csrf_token, authorization_token) {
+  async function processBookmarks(x_csrf_token, authorization_token) {
     const TWEETS_PER_REQUEST = 100;
     let tweets = [];
     let cursorBottom = "";
@@ -445,7 +436,7 @@ export const escapedCode = `// script modified and adapted from https://gist.git
         retryButton.textContent = "Try Again";
         retryButton.onclick = () => {
           errorContainer.remove();
-          processLikes(x_csrf_token, authorization_token);
+          processBookmarks(x_csrf_token, authorization_token);
         };
 
         const cancelButton = document.createElement("button");
@@ -478,7 +469,15 @@ export const escapedCode = `// script modified and adapted from https://gist.git
       100
     );
     console.log("Bookmarks processed:", tweets.length);
-    // const tweetsJson = JSON.stringify(tweets, null, 2);
+
+    // Log skipped bookmarks if any
+    if (skippedBookmarks.length > 0) {
+      console.log(
+        \`⚠️ Skipped \${skippedBookmarks.length} bookmarks due to errors:\`
+      );
+      console.log(skippedBookmarks);
+    }
+
     const version = 1.03;
     const tweetsData = {
       version: version,
@@ -576,7 +575,8 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
 
   // Save the original XMLHttpRequest object
   var originalXHR = window.XMLHttpRequest;
-  var hasProcessLikesBeenCalled = false; // Flag variable
+  var hasProcessBookmarksBeenCalled = false; // Flag variable
+  let skippedBookmarks = []; // Track skipped bookmarks
 
   // Define a new XMLHttpRequest
   function newXHR() {
@@ -600,7 +600,7 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
     const originalSend = realXHR.send;
     realXHR.send = function (body) {
       realXHR.addEventListener("readystatechange", function () {
-        if (!hasProcessLikesBeenCalled) {
+        if (!hasProcessBookmarksBeenCalled) {
           if (realXHR.readyState === 4) {
             const clientEventPattern =
               /^(https:\\/\\/(twitter\\.com|x\\.com)\\/i\\/api\\/.*\\/client_event\\.json)$/;
@@ -647,9 +647,9 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
                   "font-weight: normal"
                 );
 
-                console.log("Credentials gathered... Processing likes");
-                hasProcessLikesBeenCalled = true;
-                processLikes(x_csrf_token, authorization_token);
+                console.log("Credentials gathered... Processing bookmarks");
+                hasProcessBookmarksBeenCalled = true;
+                processBookmarks(x_csrf_token, authorization_token);
               } else {
                 console.log("Missing credentials. Continuing to intercept...");
               }
@@ -673,7 +673,7 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
   // Scroll the window to trigger a client_event request or Likes API call
   function scrollWindow() {
     window.scrollBy(0, window.innerHeight);
-    if (hasProcessLikesBeenCalled) {
+    if (hasProcessBookmarksBeenCalled) {
       clearInterval(scrollInterval);
     }
   }
@@ -685,10 +685,6 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
       console.log(
         "entryResult",
         entryResult,
-        "tweetDataLegacy",
-        entryResult.legacy,
-        "userData",
-        userData,
         "quotedTweetData",
         quotedTweetData
       );
@@ -725,7 +721,6 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
             userLegacyData.id_str =
               quotedTweetResult.core.user_results.result.rest_id;
             quoteStatus = constructTweetObject(
-              // legacyData.legacy,
               quotedTweetResult,
               userLegacyData,
               null
@@ -735,13 +730,9 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
 
         return {
           id: tweetData.id_str,
-          // conversation_id: tweetData.conversation_id_str,
           date: new Date(tweetData.created_at).toISOString(),
           text: fullText,
           url: \`https://twitter.com/\${userData.screen_name}/status/\${tweetData.id_str}\`,
-          // reply_count: tweetData.reply_count,
-          // retweet_count: tweetData.retweet_count,
-          // is_self_thread: Boolean(tweetData.self_thread),
           links: linkArray,
           user: {
             id: userData.id_str,
@@ -754,7 +745,6 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
             ? mediaEntities.map((media) => ({
                 type: media.type,
                 url: media.media_url_https,
-                // media_url: media.expanded_url,
                 video_src:
                   media.type === "video" || media.type === "animated_gif"
                     ? media.video_info.variants
@@ -776,25 +766,24 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
     entries.forEach((item) => {
       // don't process cursor entries
       if (item.content.entryType === "TimelineTimelineItem") {
-        const entryResult = item.content.itemContent.tweet_results.result;
-        const tweetLegacy = entryResult.legacy;
-        // check if tweet is underfined. This happens when tweet is deleted or removed (will show up as 'This post is unavailable' in timeline)
-        if (tweetLegacy === undefined) {
-          console.log(
-            "Tweet object undefined. It was probably deleted or removed: ",
-            item.content
-          );
+        const entryResult =
+          item.content.itemContent.tweet_results.result.__typename ===
+          "TweetWithVisibilityResults"
+            ? item.content.itemContent.tweet_results.result.tweet // unwrap the real tweet
+            : item.content.itemContent.tweet_results.result;
+
+        // Check if entryResult and its legacy property exist
+        if (!entryResult || !entryResult.legacy) {
+          skippedBookmarks.push(item);
           return;
         }
-        if (
-          entryResult.__typename === "Tweet" &&
-          entryResult.core?.user_results?.result?.legacy
-        ) {
+
+        if (entryResult.core?.user_results?.result?.legacy) {
           let quotedTweet = null;
           let user = entryResult.core.user_results.result.legacy;
           user.id_str = entryResult.core.user_results.result.rest_id;
 
-          if (tweetLegacy.is_quote_status) {
+          if (entryResult.legacy.is_quote_status) {
             quotedTweet = entryResult.quoted_status_result;
             // We check if quotedTweet is an empty object to catch cases where the quoted tweet was deleted
             if (Object.keys(quotedTweet).length === 0) {
@@ -803,12 +792,13 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
           }
 
           const tweetObject = constructTweetObject(
-            // tweetLegacy,
             entryResult,
             user,
             quotedTweet
           );
-          parsedTweets.push(tweetObject);
+          if (tweetObject) {
+            parsedTweets.push(tweetObject);
+          }
         }
       }
     });
@@ -860,7 +850,7 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
     return await response.json();
   }
 
-  async function processLikes(x_csrf_token, authorization_token) {
+  async function processBookmarks(x_csrf_token, authorization_token) {
     const TWEETS_PER_REQUEST = 100;
     let tweets = [];
     let cursorBottom = "";
@@ -952,7 +942,7 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
         retryButton.textContent = "Try Again";
         retryButton.onclick = () => {
           errorContainer.remove();
-          processLikes(x_csrf_token, authorization_token);
+          processBookmarks(x_csrf_token, authorization_token);
         };
 
         const cancelButton = document.createElement("button");
@@ -985,7 +975,15 @@ export const bookmarkletCode = encodeURI(`javascript:(function(){// script modif
       100
     );
     console.log("Bookmarks processed:", tweets.length);
-    // const tweetsJson = JSON.stringify(tweets, null, 2);
+
+    // Log skipped bookmarks if any
+    if (skippedBookmarks.length > 0) {
+      console.log(
+        \`⚠️ Skipped \${skippedBookmarks.length} bookmarks due to errors:\`
+      );
+      console.log(skippedBookmarks);
+    }
+
     const version = 1.03;
     const tweetsData = {
       version: version,

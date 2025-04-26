@@ -5,9 +5,11 @@ export default defineNuxtRouteMiddleware((to, from) => {
   );
 
   const isNavigatingToHome = to.path === "/";
-  const isComingFromSearchOrChat = ["/search", "/chat", "/export"].includes(
-    from.path
-  );
+  const isComingFromSearchOrChat = [
+    "/search",
+    "/claude-plugin",
+    "/export",
+  ].includes(from.path);
 
   if (savedBookmarks.value && isNavigatingToHome && !isComingFromSearchOrChat) {
     return navigateTo("/search");

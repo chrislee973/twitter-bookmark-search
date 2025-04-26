@@ -23,7 +23,7 @@
         pretty tedious and finicky). Then you can start asking questions like:
       </p>
 
-      <ul class="text-sm pl-5 mb-3 list-disc space-y-1.5 mt-2">
+      <ul class="pl-5 mb-3 list-disc space-y-1.5 mt-2">
         <li>
           "Return the abstracts of my 5 most recent bookmarked arxiv papers"
         </li>
