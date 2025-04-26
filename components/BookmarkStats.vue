@@ -26,7 +26,7 @@
       class="w-[600px] mx-auto border border-border rounded-xl overflow-hidden"
     >
       <div
-        v-for="({ user, count }, index) in mostBookmarkedUsers?.slice(
+        v-for="{ user, count } in mostBookmarkedUsers?.slice(
           0,
           numberBookmarkedUsersToDisplay
         ) || []"
