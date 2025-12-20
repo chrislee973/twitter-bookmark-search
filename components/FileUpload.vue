@@ -39,6 +39,15 @@
             Saving to browser storage means you don't have to reupload your
             bookmarks file every time you visit this site.
           </div>
+          <!-- Show storage error if IndexedDB fails -->
+          <div v-if="storageError" class="text-xs text-red-500 mt-1">
+            <Icon name="radix-icons:exclamation-triangle" class="inline" />
+            {{ storageError }}
+          </div>
+          <!-- Show file size info for context -->
+          <div v-if="fileSizeInfo" class="text-xs text-muted-foreground mt-1">
+            File size: {{ fileSizeInfo }}
+          </div>
         </div>
       </div>
     </ClientOnly>
@@ -52,9 +61,25 @@
 </template>
 
 <script setup lang="ts">
-import { bookmarks, isUseLocalStorage } from "~/composables/state";
+// ============================================================
+// IndexedDB Integration Notes:
+// ============================================================
+// The save-to-storage logic is now handled reactively in useBookmarks.ts
+// When isUseLocalStorage is true and bookmarks changes, it auto-saves to IndexedDB
+// This simplifies this component - we just set the data and navigate
+//
+// Key differences from the old localStorage approach:
+// 1. No manual save call needed - the watcher in useBookmarks handles it
+// 2. storageError will be set if IndexedDB fails (e.g., private browsing)
+// 3. File size is no longer a concern - IndexedDB handles 50MB+ easily
+// ============================================================
+
+import {
+  bookmarks,
+  isUseLocalStorage,
+  storageError,
+} from "~/composables/state";
 import { Switch } from "@/components/ui/switch";
-import { useLocalStorage } from "@vueuse/core";
 
 import type { Tweet } from "~/types";
 
@@ -64,13 +89,23 @@ const isOverDropZone = ref(false);
 const isValidJsonSchema = ref<Boolean | null>(null);
 
 const uploadFileName = ref<string | null>(null);
+const fileSizeInfo = ref<string | null>(null);
+
+// Format bytes into human-readable string
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return bytes + " bytes";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
 async function onFileChange(e: Event) {
   const target = e.target as HTMLInputElement;
   if (target.files) {
     // parse the file as json and assign it to the bookmarks ref
     const file = target.files[0];
     uploadFileName.value = file.name;
-    const filename = file.name;
+    fileSizeInfo.value = formatBytes(file.size);
+
     const reader = new FileReader();
     reader.onload = () => {
       // validate the objects in the uploaded file against the Tweet type
@@ -80,59 +115,28 @@ async function onFileChange(e: Event) {
         if (!version && version <= 1) {
           throw new Error("Invalid version");
         }
+        // Setting bookmarks.value triggers the watcher in useBookmarks.ts
+        // If isUseLocalStorage is true, it will automatically save to IndexedDB
         bookmarks.value = data.data;
         isValidJsonSchema.value = true;
       } catch (e) {
         console.error(e);
         isValidJsonSchema.value = false;
       }
-
-      // bookmarks.value = JSON.parse(reader.result as string);
-
-      // if localstorage contained an old copy of bookmarks, update with the new one they just uploaded
-      // if (isUseLocalStorage.value === true) {
-      //   // localStorage.setItem(
-      //   //   "twitter-bookmarks",
-      //   //   JSON.stringify(bookmarks.value)
-      //   // );
-      //   useLocalStorage("twitter-bookmarks", bookmarks.value);
-      // }
-      // navigateTo("/search");
     };
     reader.readAsText(file);
   }
 }
 
 function startSearching() {
-  // if isUseLocalStorage is set by the user to true, save the bookmarks to localstorage
-  if (isUseLocalStorage.value && bookmarks.value) {
-    const localBookmarks = useLocalStorage(
-      "twitter-bookmarks",
-      bookmarks.value
-    );
-    localBookmarks.value = bookmarks.value;
-  }
-
+  // Navigation is simple now - the save logic is handled by the watcher
+  // in useBookmarks.ts when isUseLocalStorage is true
   navigateTo("/search");
 }
 
-watchEffect(() => {
-  // if isUseLocalStorage is set by the user to false, delete the bookmarks from localstorage
-  if (isUseLocalStorage.value === false) {
-    const bookmarksLocalStorage = useLocalStorage("twitter-bookmarks", null);
-    if (bookmarksLocalStorage.value) {
-      bookmarksLocalStorage.value = null;
-    }
-  }
-});
-
-// watchEffect(() => {
-//   if (isUseLocalStorage.value === true && bookmarks.value) {
-//     // localStorage.setItem("twitter-bookmarks", JSON.stringify(bookmarks.value));
-//     useLocalStorage("twitter-bookmarks", bookmarks.value);
-//   } else {
-//     // localStorage.removeItem("twitter-bookmarks");
-//     useLocalStorage("twitter-bookmarks", null);
-//   }
-// });
+// ============================================================
+// Clear IndexedDB when user disables storage
+// ============================================================
+// This is still handled by the watcher in useBookmarks.ts
+// When isUseLocalStorage becomes false, it clears storedBookmarks
 </script>
