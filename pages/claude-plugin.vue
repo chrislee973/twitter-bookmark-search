@@ -1,74 +1,104 @@
 <template>
   <div class="w-full my-8">
-    <h2 class="text-2xl font-bold mb-4">Chat with your bookmarks</h2>
+    <h2 class="text-2xl font-bold mb-4">
+      Analyze and chat with your bookmarks using Claude Code
+    </h2>
 
+    <!-- Section 1: General Claude Code Workflow -->
     <div>
       <p class="mb-3">
-        You can chat with and analyze your bookmarks directly in Claude Desktop
-        via MCP Server. MCP servers are like plugins for Claude Desktop that
-        give it access to external data like your bookmarks. A bit like browser
-        extensions.
-      </p>
-      <p>
-        Click the button below to download a sqlite database file of your
-        bookmarks, then
         <a
-          href="https://github.com/chrislee973/twitter-bookmark-mcp"
+          href="https://docs.anthropic.com/en/docs/claude-code"
           target="_blank"
           class="text-blue-600 underline"
-          >follow these instructions</a
+          >Claude Code</a
         >
-        to set up the MCP Server that connects this database to Claude Desktop
-        (fair warning though, right now the setup process for MCP servers is
-        pretty tedious and finicky). Then you can start asking questions like:
+        is an AI assistant that runs locally on your computer. You can point it
+        at your bookmarks and then chat with them in natural language. It'll
+        write and run SQL queries, analyze patterns, and surface insights.
+      </p>
+      <p class="mb-3">
+        Install Claude Code by following
+        <a
+          href="https://code.claude.com/docs/en/quickstart"
+          target="_blank"
+          class="text-blue-600 underline"
+          >these instructions</a
+        >. Then, download your bookmarks database below ("Download my bookmarks
+        database" button at the bottom of the page) and save it somewhere on
+        your computer. Open Claude Code in that same directory, and you're all
+        set. Try asking questions like:
       </p>
 
-      <ul class="pl-5 mb-3 list-disc space-y-1.5 mt-2">
+      <ul class="pl-5 mb-3 list-disc space-y-1.5">
         <li>
           "Return the abstracts of my 5 most recent bookmarked arxiv papers"
         </li>
         <li>
-          "Look through my twitter bookmarks for bookmarks that contain a link
-          to the blog lesswrong, and summarize the content of each of those blog
-          posts"
+          "Find bookmarks containing lesswrong links and summarize each post"
         </li>
         <li>"Create a chart of my bookmark frequency over time"</li>
+        <li>"Who are my most bookmarked accounts?"</li>
       </ul>
     </div>
 
-    <!-- <div
-      v-if="!bookmarks"
-      class="rounded-lg bg-amber-50 p-4 border border-amber-200 mb-6"
-    >
-      <p class="text-amber-800 mb-2 font-medium">No bookmarks data found</p>
-      <p class="text-amber-700">
-        Please go to the
-        <NuxtLink to="/" class="underline font-medium">Instructions</NuxtLink>
-        page first and upload your bookmarks JSON file.
+    <!-- Section 2: Taste Graph Analysis -->
+    <div class="mt-8 pt-6 border-t">
+      <h3 class="text-xl font-semibold mb-3">
+        Go Deeper: Taste Graph Analysis
+      </h3>
+      <p class="mb-3">
+        For a more structured deep-dive of your bookmarks, I also created an
+        opinionated prompt that helps surface interesting patterns and hidden
+        connections in them. It also runs a sequence of temporal analyses to try
+        to see how your tastes and interests might've changed over time.
+        Hopefully you'll come away understanding yourself better and discover
+        something interesting!
       </p>
-    </div> -->
+      <p class="mb-3">A sample of some of the things it surfaces:</p>
+      <ul class="pl-5 mb-3 list-disc space-y-1.5">
+        <li>Topic clusters and how they relate</li>
+        <li>Temporal patterns — how your interests evolve over time</li>
+        <li>Your "intellectual north stars" vs accounts you've forgotten</li>
+        <li>Co-occurrence networks (who you bookmark on the same days)</li>
+        <li>Surprising outliers and anomalies</li>
+      </ul>
+      <p class="mb-3">
+        <a
+          href="/taste-graph-prompt.md"
+          download="taste-graph-prompt.md"
+          class="text-blue-600 underline"
+          >Download the analysis prompt</a
+        >
+        and save it in the same directory as your bookmarks.db. Then run it in
+        Claude Code:
+      </p>
+      <div
+        class="bg-muted rounded-md px-4 py-3 font-mono text-sm mb-3 overflow-x-auto"
+      >
+        Using @taste-graph-prompt.md, run the analysis on @bookmarks.db
+      </div>
+    </div>
+
+    <!-- No bookmarks state -->
     <div
       v-if="!bookmarks"
       class="mt-12 relative border-dashed border rounded-md h-[450px]"
     >
       <div class="absolute inset-0 m-auto h-fit w-fit text-center">
-        <div class="font-semibolt text-lg">No bookmarks file detected</div>
+        <div class="font-semibold text-lg">No bookmarks file detected</div>
         <div class="text-sm text-muted-foreground mt-2">
           Follow the steps in
-          <NuxtLink to="/" class="underline">the instructions </NuxtLink>
+          <NuxtLink to="/" class="underline">the instructions</NuxtLink>
           and upload your bookmarks file.
         </div>
       </div>
     </div>
 
-    <div v-else>
-      <!-- <p class="mb-4 text-muted-foreground">
-        Convert your bookmarks to a SQLite database for more powerful querying
-        and offline analysis.
-      </p> -->
-
+    <!-- Download button -->
+    <div v-else class="mt-8 pt-6 border-t">
       <ClientOnly>
-        <div class="mt-4 space-y-4">
+        <div class="space-y-4">
           <Button
             @click="convertToSqlite"
             :disabled="isProcessing"
