@@ -1,8 +1,8 @@
-export default defineNuxtRouteMiddleware((to, from) => {
-  const savedBookmarks = useLocalStorage<Object[] | null>(
-    "twitter-bookmarks",
-    null
-  );
+import { get } from "idb-keyval";
+
+export default defineNuxtRouteMiddleware(async (to, from) => {
+  // IndexedDB doesn't exist on server
+  if (import.meta.server) return;
 
   const isNavigatingToHome = to.path === "/";
   const isComingFromSearchOrChat = [
@@ -11,7 +11,19 @@ export default defineNuxtRouteMiddleware((to, from) => {
     "/export",
   ].includes(from.path);
 
-  if (savedBookmarks.value && isNavigatingToHome && !isComingFromSearchOrChat) {
-    return navigateTo("/search");
+  if (isNavigatingToHome && !isComingFromSearchOrChat) {
+    try {
+      const savedBookmarks = await get("twitter-bookmarks");
+      if (
+        savedBookmarks &&
+        Array.isArray(savedBookmarks) &&
+        savedBookmarks.length > 0
+      ) {
+        return navigateTo("/search");
+      }
+    } catch (e) {
+      // IndexedDB not available or error - continue normally
+      console.warn("[middleware] Could not check IndexedDB:", e);
+    }
   }
 });
