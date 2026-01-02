@@ -129,6 +129,63 @@ Now go off-script. Dig deeper into the data and look for anything surprising:
 
 Spend time here. This is where the most interesting discoveries often hide.
 
+### 10. What Your Bookmarks Reveal About You
+
+Use the patterns discovered above to build a psychological and cognitive profile of the user. This should go beyond "you like X topic" to reveal *how they think* and *what that means*.
+
+**Title this section:** `# What Your Bookmarks Reveal About You`
+
+**Process:**
+
+1. **First, design your own diagnostic dimensions** based on what you've seen in this specific dataset. Examples of dimensions that *might* be relevant (but discover your own):
+   - Practical vs theoretical orientation
+   - Starting vs finishing energy
+   - Breadth vs depth of attention
+   - Past vs present vs future orientation
+   - Solo vs collaborative framing
+   - Optimistic vs critical lens
+
+2. **For each dimension you identify, construct keyword queries** that would detect it in this user's bookmarks. Run the queries and report the ratios.
+
+3. **Look for what's absent.** Scan for common life domains that barely appear: politics, health, relationships, entertainment, finance, etc. Absence is signal — either they get this elsewhere, or it's genuinely neglected.
+
+4. **Examine the depth distribution:**
+   - What % of accounts are saved exactly once? (breadth signal)
+   - What % are saved 5+ times? (depth signal)
+   - What does this ratio suggest about how they consume information?
+
+5. **Identify the "north star" accounts** — voices bookmarked across multiple years. What do these persistent voices have in common? What does the user keep returning to that others fade from?
+
+6. **Look for contradictions and tensions.** The interesting insights often live in the gaps: someone who saves productivity content but shows no completion-focused saves; someone who bookmarks team-building advice but only follows solo builders.
+
+**Synthesize into:**
+
+- **Strengths**: What cognitive patterns would serve them well? Ground every claim in specific numbers from your analysis.
+- **Weaknesses/Blind spots**: What patterns might limit them? Where are they over-indexed or under-indexed? Be direct, not diplomatic.
+- **Fields/endeavors they'd likely excel in**: Based on interest intersections and cognitive style — where do their overlapping interests suggest a unique niche?
+- **Fields they'd likely struggle with**: Based on absences and anti-patterns
+- **Core tension**: What's the central contradiction or unresolved question their bookmarks reveal?
+
+**Tone:**
+- Be direct and specific, not flattering
+- Every claim needs a number behind it
+- Name the tensions — don't smooth them over
+- Write like a sharp friend who's been given full access to their reading history, not like a personality quiz result
+
+
+### 11. Questions for Reflection
+
+End with 5-7 questions that emerge organically from the analysis — things the data raises but cannot answer.
+
+These should be:
+- **Specific to patterns found** (reference actual numbers: "You save 3x more X than Y...")
+- **Pointed, not generic** (not "Do you value learning?" but "Of your 3,200 saves, how many resulted in actual projects?")
+- **Designed to surface something the user might not have noticed**
+
+Avoid therapy-speak. Aim for the questions a perceptive friend would ask after spending an hour looking through your bookmarks with you.
+
+**Important**: The self-portrait (Section 10) must come *after* the factual analysis in Sections 1-9. The psychological claims need to be grounded in specific data points already computed — don't speculate without numbers. If you want to make a claim about the user's cognitive style, first run the query that would test it.
+
 ## Output Style
 
 - ASCII box-drawing for tables and diagrams
