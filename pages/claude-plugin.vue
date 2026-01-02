@@ -48,12 +48,12 @@
         Go Deeper: Taste Graph Analysis
       </h3>
       <p class="mb-3">
-        For a more structured deep-dive of your bookmarks, I also created an
+        For a more structured deep-dive of your bookmarks, I created an
         opinionated prompt that helps surface interesting patterns and hidden
         connections in them. It also runs a sequence of temporal analyses to try
         to see how your tastes and interests might've changed over time.
-        Hopefully you'll come away understanding yourself better and discover
-        something interesting!
+        Hopefully you'll discover something interesting and come away
+        understanding what your bookmarks reveal about you!
       </p>
       <p class="mb-3">A sample of some of the things it surfaces:</p>
       <ul class="pl-5 mb-3 list-disc space-y-1.5">
@@ -62,7 +62,39 @@
         <li>Your "intellectual north stars" vs accounts you've forgotten</li>
         <li>Co-occurrence networks (who you bookmark on the same days)</li>
         <li>Surprising outliers and anomalies</li>
+        <li>What your bookmarks reveal about you</li>
+        <li>Questions for reflection</li>
       </ul>
+
+      <!-- Example Analysis Dropdown -->
+      <details
+        class="group border border-neutral-200 rounded-lg overflow-hidden mb-6"
+      >
+        <summary
+          class="px-4 py-3 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors flex items-center justify-between"
+        >
+          <span class="font-medium text-neutral-700"
+            >See what an analysis of my bookmarks looks like like</span
+          >
+          <span
+            class="text-neutral-400 text-sm group-open:rotate-180 transition-transform"
+            >▼</span
+          >
+        </summary>
+        <div class="p-4 bg-white">
+          <div v-if="!exampleAnalysis" class="text-neutral-500 text-sm">
+            Loading...
+          </div>
+          <div
+            v-else
+            class="prose prose-sm prose-neutral max-w-none"
+            v-html="exampleAnalysis"
+          />
+        </div>
+      </details>
+
+      <!-- Instructions subheader -->
+      <h4 class="text-lg font-medium mb-3">Instructions</h4>
       <p class="mb-3">
         <a
           href="/taste-graph-prompt.md"
@@ -126,6 +158,7 @@
 
 <script setup lang="ts">
 import { bookmarks } from "~/composables/state";
+import { marked } from "marked";
 
 // Global reference to the SQL.js instance
 let SQL: any = null;
@@ -133,6 +166,19 @@ let SQL: any = null;
 // Single state for tracking conversion process
 const isProcessing = ref(false);
 const processingError = ref<Error | null>(null);
+
+// Example analysis markdown
+const exampleAnalysis = ref<string | null>(null);
+
+onMounted(async () => {
+  try {
+    const response = await fetch("/taste-graph-analysis.md");
+    const markdown = await response.text();
+    exampleAnalysis.value = marked(markdown) as string;
+  } catch (error) {
+    console.error("Failed to load example analysis:", error);
+  }
+});
 
 async function convertToSqlite() {
   if (!bookmarks.value) return;
@@ -380,3 +426,58 @@ function parseDateString(dateStr: string): string | null {
   return dateStr;
 }
 </script>
+
+<style scoped>
+/* Prose styling for the embedded markdown */
+:deep(.prose) {
+  @apply text-neutral-700;
+}
+
+:deep(.prose h1) {
+  @apply text-xl font-semibold mt-0 mb-4;
+}
+
+:deep(.prose h2) {
+  @apply text-lg font-semibold mt-6 mb-3;
+}
+
+:deep(.prose h3) {
+  @apply text-base font-semibold mt-4 mb-2;
+}
+
+:deep(.prose pre) {
+  @apply bg-neutral-900 text-neutral-100 rounded-md p-3 overflow-x-auto text-xs;
+}
+
+:deep(.prose code:not(pre code)) {
+  @apply bg-neutral-100 px-1.5 py-0.5 rounded text-sm text-neutral-800;
+}
+
+:deep(.prose ul) {
+  @apply list-disc pl-5 space-y-1;
+}
+
+:deep(.prose ol) {
+  @apply list-decimal pl-5 space-y-1;
+}
+
+:deep(.prose li) {
+  @apply text-neutral-600;
+}
+
+:deep(.prose strong) {
+  @apply font-semibold text-neutral-800;
+}
+
+:deep(.prose em) {
+  @apply italic text-neutral-600;
+}
+
+:deep(.prose hr) {
+  @apply border-neutral-200 my-6;
+}
+
+:deep(.prose blockquote) {
+  @apply border-l-4 border-neutral-300 pl-4 italic text-neutral-600;
+}
+</style>

@@ -31,6 +31,7 @@
     "idb-keyval": "^6.2.2",
     "lucide-vue-next": "^0.338.0",
     "markdown-it": "^14.1.0",
+    "marked": "^17.0.1",
     "radix-vue": "^1.4.8",
     "sql.js": "^1.13.0",
     "tailwind-merge": "^2.2.1",
