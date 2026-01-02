@@ -102,7 +102,9 @@
           class="text-blue-600 underline"
           >Download the analysis prompt</a
         >
-        and save it in the same directory as your bookmarks.db. Then run it in
+        and click the "Download my bookmarks database" button below to download
+        your bookmarks as a database file, making sure that the prompt and
+        bookmarks database are saved in the same directory. Then run this in
         Claude Code:
       </p>
       <div
