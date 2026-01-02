@@ -74,7 +74,7 @@
           class="px-4 py-3 bg-neutral-50 cursor-pointer hover:bg-neutral-100 transition-colors flex items-center justify-between"
         >
           <span class="font-medium text-neutral-700"
-            >See what an analysis of my bookmarks looks like like</span
+            >See what an analysis of my bookmarks looks like</span
           >
           <span
             class="text-neutral-400 text-sm group-open:rotate-180 transition-transform"
